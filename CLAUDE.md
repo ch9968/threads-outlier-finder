@@ -140,6 +140,12 @@ Status: Accepted | Deprecated | Superseded by {NNN}
 - `docs/adr/*.md` — 기존 아키텍처 결정과 모순되는 패턴 사용
 - `DESIGN.md` (존재 시) — 디자인 시스템 위반
 
+### Design System
+Always read DESIGN.md before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match DESIGN.md.
+
 ### 프로젝트 문서 구조
 
 ```
