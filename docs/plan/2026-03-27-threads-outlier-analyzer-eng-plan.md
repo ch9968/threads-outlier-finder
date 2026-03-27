@@ -233,22 +233,34 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 예상 LOC: ~500
 ```
 
-### Phase 3: Collection & Pattern Analysis (~20min CC)
+### Phase 3A: Collection UI (~10min CC)
 
 ```
 범위:
   - 컬렉션 Server Actions (toggle, remove)
   - 결과 페이지에 하트 아이콘 추가
   - 컬렉션 페이지 (그리드 + 계정별 필터 칩)
+  - Unit 테스트: 컬렉션 CRUD
+
+의존: Phase 1 완료 (게시물 데이터만 필요)
+산출: 컬렉션 CRUD + UI 동작
+예상 LOC: ~300
+병렬: Phase 2와 동시 빌드 가능
+```
+
+### Phase 3B: Pattern Analysis (~15min CC)
+
+```
+범위:
   - 패턴 분석 프롬프트 (lib/prompts/pattern.ts)
   - Route Handler: /api/pattern-analyze (스트리밍)
   - 패턴 카드 UI
-  - Unit 테스트: 컬렉션 CRUD, 패턴 스키마
+  - Unit 테스트: 패턴 스키마
   - Integration 테스트: 패턴 분석 스트리밍
 
-의존: Phase 2 완료 (개별 분석 결과가 패턴 분석의 입력)
-산출: 컬렉션 + 패턴 분석 동작
-예상 LOC: ~600
+의존: Phase 2 + Phase 3A 완료 (개별 분석 결과 + 컬렉션이 패턴 분석의 입력)
+산출: 패턴 분석 동작
+예상 LOC: ~300
 ```
 
 ### Phase 4: Deploy & Polish (~15min CC)
@@ -258,11 +270,10 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
   - Vercel 배포 설정
   - 환경변수 설정 (SITE_PASSWORD, Supabase, Vertex AI, Apify)
   - 에러 바운더리 + 로딩 상태
-  - Webhook secret 검증
   - Integration 테스트: auth 미들웨어, webhook 보안
-  - E2E 테스트: 홈 → 결과 → 분석 플로우
+  - E2E 테스트: 홈 → 결과 → 분석 → 컬렉션 플로우
 
-의존: Phase 3 완료
+의존: Phase 3B 완료
 산출: 배포된 프로덕션 앱
 예상 LOC: ~300
 ```
@@ -343,26 +354,24 @@ santiago/
 └── ...
 ```
 
-## Worktree Parallelization
-
-Phase 간 의존성이 순차적이므로 병렬 워크트리는 불필요:
+## Parallelization
 
 ```
-Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4
-(순차)     (순차)     (순차)     (순차)     (순차)
+                  ┌─ Phase 2: AI 분석 (20min) ───┐
+Phase 1 [DONE] ──┤                                ├→ Phase 3B: 패턴 분석 (15min) → Phase 4 (15min)
+                  └─ Phase 3A: 컬렉션 UI (10min) ─┘
 ```
 
-Phase 1 내부에서는 프론트엔드(UI)와 백엔드(API/webhook)를 병렬로 작업할 수 있지만,
-단일 CC 세션에서 순차 실행이 더 효율적이다 (컨텍스트 공유).
+Phase 2와 3A는 별도 워크스페이스에서 병렬 빌드 가능. 둘 다 Phase 1만 의존.
 
 ## 총 예상
 
-| | Human team | CC+gstack |
-|---|---|---|
-| Phase 0 | 2시간 | ~15분 |
-| Phase 1 | 1주 | ~30분 |
-| Phase 2 | 3일 | ~20분 |
-| Phase 3 | 3일 | ~20분 |
-| Phase 4 | 1일 | ~15분 |
-| **Total** | **~3주** | **~1.5시간** |
-| 예상 LOC | | ~2,350 |
+| | Human team | CC+gstack | 비고 |
+|---|---|---|---|
+| Phase 0 | 2시간 | ~15분 | [DONE] |
+| Phase 1 | 1주 | ~30분 | [DONE] |
+| Phase 2 + 3A | 4일 | ~20min (병렬) | 동시 빌드 |
+| Phase 3B | 2일 | ~15분 | |
+| Phase 4 | 1일 | ~15분 | |
+| **Total** | **~3주** | **~50분 (남은 분)** | |
+| 예상 LOC | | ~2,350 | |
