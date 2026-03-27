@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabase/client";
 import { CollectionClient } from "@/components/collection-client";
+import { PatternStream } from "@/components/pattern-stream";
+import { PatternCardSchema } from "@/lib/prompts/pattern";
+import type { PatternCard } from "@/lib/prompts/pattern";
 import Link from "next/link";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +70,28 @@ export default async function CollectionPage() {
       };
     });
 
+  // Fetch cached pattern analysis (optimistic: keyed by item_count).
+  // TODO: Key by sorted post IDs hash for exact cache invalidation.
+  // Current limitation: swapping posts without changing count may show stale cache.
+  // User can always hit "Re-analyze" for fresh results.
+  let cachedPatterns: PatternCard[] | null = null;
+  if (posts.length >= 3) {
+    const { data: cached } = await supabase
+      .from("pattern_analyses")
+      .select("patterns")
+      .eq("item_count", posts.length)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+
+    if (cached?.patterns) {
+      const parsed = z.array(PatternCardSchema).safeParse(cached.patterns);
+      if (parsed.success) {
+        cachedPatterns = parsed.data;
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-stone-950">
       <div className="mx-auto max-w-3xl px-6 py-8">
@@ -92,6 +118,21 @@ export default async function CollectionPage() {
             Saved outlier posts for pattern analysis
           </p>
         </div>
+
+        {/* Pattern analysis section */}
+        {posts.length >= 3 && (
+          <div className="mb-10">
+            <PatternStream
+              cachedPatterns={cachedPatterns}
+              itemCount={posts.length}
+            />
+          </div>
+        )}
+
+        {/* Divider between patterns and posts */}
+        {posts.length >= 3 && (
+          <div className="mb-8 border-t border-stone-800" />
+        )}
 
         {/* Collection content */}
         <CollectionClient initialPosts={posts} />

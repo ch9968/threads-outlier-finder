@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.1.5.0] - 2026-03-28 — Phase 3B: Cross-Collection Pattern Analysis
+
+### Added
+
+- `/api/pattern-analyze` route with Vertex AI streaming, Zod-validated pattern output, and DB caching
+- `PatternStream` client component handling streaming responses, error states, and cached pattern display
+- `PatternCard` and `PatternCardSkeleton` components for pattern results with evidence and action guides
+- `buildPatternPrompt` with prompt injection guard (code-block sandboxing) and Korean instructions
+- `parsePatternResponse` and `extractJsonFromResponse` for structured LLM output extraction
+- Pattern schema validation (PatternCardSchema, PatternEvidenceSchema) enforcing minimum 2 evidence items
+- Page-level pattern cache lookup by item_count on collection page
+- Custom not-found page matching dark theme (ISSUE-001)
+- 25 unit tests for pattern schemas, prompt builder, JSON extraction, and response parsing
+
+### Fixed
+
+- Removed stale route-level cache from pattern-analyze route, documented cache key limitation
+- Prompt injection defense added to pattern prompt (code-block boundary + ignore instruction)
+- Empty cache prevention: skip insert when no valid patterns parsed from LLM
+- Vertex AI model initialization error now returns 503 instead of crashing
+
+### Changed
+
+- Collection page integrates PatternStream section above post list (3+ items required)
+- PostCard prop renamed from `id` to `postId` for clarity
+- TODOS.md updated with P2 item for post-IDs-hash cache key improvement
+
 ## [0.1.4.0] - 2026-03-27 — Phase 2: AI Analysis Pipeline
 
 ### Added

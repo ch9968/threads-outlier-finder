@@ -102,7 +102,7 @@ export function CollectionClient({ initialPosts }: CollectionClientProps) {
           {filteredPosts.map((post) => (
               <PostCard
                 key={post.id}
-                id={post.id}
+                postId={post.id}
                 outlierScore={post.outlier_score}
                 textContent={post.text_content}
                 likeCount={post.like_count}
