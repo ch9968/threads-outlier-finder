@@ -1,0 +1,156 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { getJobStatus } from "@/lib/actions/scraping";
+import { OutlierSlider } from "./outlier-slider";
+import { PostCard } from "./post-card";
+
+interface Post {
+  id: string;
+  outlier_score: number | null;
+  text_content: string | null;
+  like_count: number;
+  repost_count: number;
+  reply_count: number;
+  media_type: string;
+  is_reply: boolean;
+  is_repost: boolean;
+  post_code: string | null;
+}
+
+interface ResultsClientProps {
+  username: string;
+  initialStatus: string;
+  initialPosts: Post[];
+  initialErrorMessage: string | null;
+  isSmallSample: boolean;
+}
+
+const POLL_INTERVAL = 3000;
+
+export function ResultsClient({
+  username,
+  initialStatus,
+  initialPosts,
+  initialErrorMessage,
+  isSmallSample,
+}: ResultsClientProps) {
+  const [status, setStatus] = useState(initialStatus);
+  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [errorMessage, setErrorMessage] = useState(initialErrorMessage);
+  const [threshold, setThreshold] = useState(2);
+
+  const poll = useCallback(async () => {
+    const result = await getJobStatus(username);
+    if (result.data) {
+      setStatus(result.data.status);
+      if (result.data.errorMessage) {
+        setErrorMessage(result.data.errorMessage);
+      }
+      // If status changed to ready, reload the page to get fresh data
+      if (result.data.status === "ready" && status !== "ready") {
+        window.location.reload();
+      }
+    }
+  }, [username, status]);
+
+  useEffect(() => {
+    if (status === "pending" || status === "scraping") {
+      const interval = setInterval(poll, POLL_INTERVAL);
+      return () => clearInterval(interval);
+    }
+  }, [status, poll]);
+
+  // Filter posts by threshold
+  const filteredPosts = posts.filter(
+    (p) => p.outlier_score !== null && p.outlier_score >= threshold
+  );
+
+  const totalOriginalPosts = posts.filter(
+    (p) => !p.is_reply && !p.is_repost
+  ).length;
+
+  // Loading state
+  if (status === "pending" || status === "scraping") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-stone-600 border-t-primary" />
+        <p className="text-sm text-stone-400">
+          Analyzing @{username}...
+        </p>
+        <p className="mt-1 text-xs text-stone-500">
+          This usually takes 30-60 seconds
+        </p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (status === "failed") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <p className="mb-2 text-sm text-error">
+          {errorMessage || "Analysis failed"}
+        </p>
+        <a
+          href="/"
+          className="mt-4 rounded-md border border-stone-700 px-4 py-2 text-sm text-stone-300 transition-colors duration-150 hover:border-stone-500"
+        >
+          Try again
+        </a>
+      </div>
+    );
+  }
+
+  // Results
+  return (
+    <div>
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-stone-100">
+            Outliers
+            <span
+              className="ml-2 text-sm font-normal text-stone-400"
+              style={{ fontFamily: "var(--font-mono)" }}
+            >
+              {filteredPosts.length}/{totalOriginalPosts}
+            </span>
+          </h2>
+          {isSmallSample && (
+            <p className="mt-1 text-xs text-stone-500">
+              Based on overall average (fewer than 11 original posts)
+            </p>
+          )}
+        </div>
+        <OutlierSlider value={threshold} onChange={setThreshold} />
+      </div>
+
+      {/* Post list */}
+      {filteredPosts.length === 0 ? (
+        <p className="py-12 text-center text-sm text-stone-500">
+          No posts above {threshold}x threshold. Try lowering the slider.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {filteredPosts
+            .sort((a, b) => (b.outlier_score ?? 0) - (a.outlier_score ?? 0))
+            .map((post) => (
+              <PostCard
+                key={post.id}
+                outlierScore={post.outlier_score}
+                textContent={post.text_content}
+                likeCount={post.like_count}
+                repostCount={post.repost_count}
+                replyCount={post.reply_count}
+                mediaType={post.media_type}
+                isReply={post.is_reply}
+                isRepost={post.is_repost}
+                postCode={post.post_code}
+              />
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}

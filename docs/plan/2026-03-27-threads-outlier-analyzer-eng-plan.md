@@ -191,23 +191,28 @@ interface PatternCard {
 예상 LOC: ~150 (Zod 스키마 + 타입)
 ```
 
-### Phase 1: Data Pipeline + UI 기본 (~30min CC)
+### Phase 1: Data Pipeline + UI 기본 (~30min CC) [DONE]
 
 ```
 범위:
-  - Next.js 프로젝트 초기화 (create-next-app)
-  - Supabase 프로젝트 생성 + 마이그레이션
+  - Next.js 프로젝트 수동 설정 (기존 Phase 0 코드 보존)
+  - Supabase 마이그레이션 (001 + 002_add_constraints)
   - 비밀번호 미들웨어 + 로그인 페이지
-  - Server Action: startScraping (Apify run 시작 + job DB 저장)
-  - API Route: /api/webhooks/apify (결과 수신 + 아웃라이어 계산 + DB 저장)
-  - Supabase Realtime 구독 (scrape_jobs status 변경 감지)
+  - Server Action: startScraping (Apify run 시작 + job DB 저장 + 1시간 쿨다운 + 중복 방지)
+  - API Route: /api/webhooks/apify (결과 수신 + 아웃라이어 계산 + DB 저장 + secret 검증 + 멱등성)
+  - Server-side polling (Realtime 대신 — anon key 노출 방지, eng review Issue 1)
   - 홈 페이지 (계정 입력만 — 순수 입력 터미널, 이력 없음)
   - 결과 페이지 (아웃라이어 리스트 + 슬라이더 2x~10x)
-  - Unit 테스트: 아웃라이어 계산, Zod 스키마, 엣지 케이스
+  - 아웃라이어 계산에서 reply/repost 제외 (eng review Issue 5)
+  - Unit 테스트: 아웃라이어 계산, Zod 스키마, 엣지 케이스 (61 tests)
+
+Minor Decision: Supabase Realtime → Server-side polling 변경 (보안: RLS 없이 anon key 클라이언트 노출 방지)
+Minor Decision: Webhook secret 검증을 Phase 4에서 Phase 1으로 앞당김
+Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 0 완료
 산출: 스크래핑 → 결과 표시 동작하는 앱
-예상 LOC: ~800
+예상 LOC: ~800 (실제: ~1,200)
 ```
 
 ### Phase 2: AI Analysis (~20min CC)

@@ -60,8 +60,9 @@ export const ApifyPostSchema = z.object({
   repostCount: z.number().int().nonnegative().default(0),
   quoteCount: z.number().int().nonnegative().default(0),
 
-  // Media
-  mediaType: z.enum(["text", "photo", "video", "carousel"]).default("text"),
+  // Media — use catch() to gracefully handle unknown types (e.g. "sticker")
+  // instead of failing validation and dropping the entire post
+  mediaType: z.string().catch("text"),
   media: z.array(z.unknown()).default([]),
 
   // Metadata
