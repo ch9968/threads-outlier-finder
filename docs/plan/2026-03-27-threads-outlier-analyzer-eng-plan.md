@@ -201,7 +201,7 @@ interface PatternCard {
   - Server Action: startScraping (Apify run 시작 + job DB 저장)
   - API Route: /api/webhooks/apify (결과 수신 + 아웃라이어 계산 + DB 저장)
   - Supabase Realtime 구독 (scrape_jobs status 변경 감지)
-  - 홈 페이지 (계정 입력 + 최근 분석 이력)
+  - 홈 페이지 (계정 입력만 — 순수 입력 터미널, 이력 없음)
   - 결과 페이지 (아웃라이어 리스트 + 슬라이더 2x~10x)
   - Unit 테스트: 아웃라이어 계산, Zod 스키마, 엣지 케이스
 
@@ -269,7 +269,7 @@ santiago/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx                    # 홈 (계정 입력 + 최근 이력)
+│   │   ├── page.tsx                    # 홈 (계정 입력만)
 │   │   ├── login/
 │   │   │   └── page.tsx                # 비밀번호 입력
 │   │   ├── results/

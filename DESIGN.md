@@ -44,8 +44,8 @@
   - 100: `#F5F5F4` (light mode background)
   - 200: `#E7E5E4` (light mode border)
   - 300: `#D6D3D1`
-  - 400: `#A8A29E` (dark mode secondary text)
-  - 500: `#78716C` (dark mode tertiary text, light mode secondary text)
+  - 400: `#A8A29E` (dark mode secondary text, dark mode tertiary text — AA compliant 7.83:1)
+  - 500: `#78716C` (light mode secondary text only — dark mode에서 WCAG AA 미달 4.12:1)
   - 600: `#57534E`
   - 700: `#44403C` (dark mode border)
   - 800: `#292524` (dark mode card/elevated)
@@ -115,10 +115,10 @@
 - 호버 시 border 강조.
 
 ### Dimension Card
-- 6차원 분석 결과 표시.
-- 헤더: 차원명 + 점수(mono, amber)
-- 프로그레스 바: 3px, amber fill
-- 설명: caption size, tertiary color
+- 6차원 분석 결과 표시 (정성 분석만, 점수 없음 — ADR: "LLM 점수 = fake rigor").
+- 헤더: 차원명 (Pretendard 600, amber text)
+- 본문: 분석 텍스트 (Body size, secondary color). 2~4문장의 인사이트.
+- 훅 유형 태그: 해당 차원이 훅 분석일 경우, 훅 유형 배지 (neutral badge)
 
 ## Decisions Log
 | Date | Decision | Rationale |
@@ -129,3 +129,5 @@
 | 2026-03-27 | JetBrains Mono for data | 숫자를 디자인 요소로 승격. 배수, 인게이지먼트 수치가 시각적 앵커. |
 | 2026-03-27 | Pretendard as body font | 한국어 UI 표준. 한글+라틴 커버. 가변 폰트로 번들 최적화. |
 | 2026-03-27 | Satoshi for brand only | "Santiago" 라틴 로고 전용. 본문과 명확히 분리. |
+| 2026-03-27 | Dimension Card: 점수/프로그레스 바 제거 | "LLM 점수 = fake rigor" 원칙. 정성 텍스트만 표시. |
+| 2026-03-27 | Dark mode tertiary: stone-500→stone-400 | WCAG AA 대비율 미달 (4.12:1→7.83:1). |

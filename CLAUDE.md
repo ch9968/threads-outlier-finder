@@ -19,10 +19,10 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 
 ### 세션 운용 원칙
 
-**같은 세션 안에서 역할을 체이닝한다.** 각 역할의 출력이 다음 역할의 컨텍스트가 되므로,
-build → review → qa → ship은 하나의 세션에서 순차적으로 돌린다.
-build한 맥락(왜 이렇게 구현했는지, 트레이드오프)을 review가 알고 있어야
-수정 반영의 디테일이 올라간다.
+**같은 세션 안에서 역할을 체이닝한다.** build → review → qa → ship은
+하나의 세션에서 순차적으로 돌린다. 단, review와 qa는 Agent로 위임하여
+컨텍스트를 절약한다 (자동 스프린트 규칙 참조). build 맥락(왜 이렇게 구현했는지,
+트레이드오프)은 커밋 메시지와 diff를 통해 Agent에 전달된다.
 
 **세션을 분리하는 경우:**
 - Plan(설계) → Build(구현) 사이: 역할이 근본적으로 다르고, Plan 결과는 파일로 저장됨
@@ -69,14 +69,22 @@ gstack 스킬이 문서를 생성할 때, `~/.gstack/projects/`에 저장하는 
 1. eng-plan 읽기 → Phase N 범위 확인
 2. /plan-eng-review (2차 구현 게이트) → Phase N 상세 검증
 3. Build → Phase N 범위만 구현
-4. /review → 코드 리뷰 + 자동 수정
-5. /qa → QA 테스트 (staging URL이 있으면 브라우저 테스트 포함)
-6. /ship → PR 생성
+4. Agent로 /review 위임 → 결과만 수신, 수정은 메인에서 적용
+5. Agent로 /qa 위임 → 결과만 수신, 수정은 메인에서 적용
+6. /ship → PR 생성 (가벼움, 메인에서 직접 실행)
 7. eng-plan 해당 Phase를 [DONE]으로 업데이트
 ```
 
-중간에 사용자 판단이 필요한 질문(AskUserQuestion)이 나오면 정상적으로 묻고 진행한다.
-컨텍스트가 과도하게 길어지면 사용자에게 알리고 세션 분리를 제안한다.
+**컨텍스트 절약을 위한 Agent 위임 규칙:**
+- Step 4, 5는 Agent tool로 서브에이전트를 띄워 실행한다. 스킬의 전체 워크플로우가
+  서브에이전트 컨텍스트에서 돌고, 메인에는 결과 요약만 반환된다.
+- Agent 프롬프트에 "이 프로젝트에서 /review (또는 /qa) 실행해줘"와 함께
+  현재 브랜치, base branch, Phase 범위 정보를 전달한다.
+- Agent가 AUTO-FIX 항목을 직접 수정하고, ASK 항목은 목록으로 반환한다.
+  메인 세션에서 사용자에게 ASK 항목을 보여주고 판단을 받는다.
+- /ship은 가볍고 사용자 인터랙션이 필요하므로 메인에서 직접 실행한다.
+
+중간에 사용자 판단이 필요한 질문이 나오면 정상적으로 묻고 진행한다.
 
 ### 코드 컨벤션
 
