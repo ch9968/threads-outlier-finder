@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@google-cloud/vertexai": "^1.10.3",
     "@supabase/supabase-js": "^2.100.1",
     "apify-client": "^2.22.3",
     "next": "^16.2.1",

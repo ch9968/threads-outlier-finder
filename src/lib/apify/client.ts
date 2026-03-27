@@ -31,6 +31,7 @@ export async function startApifyRun(
       },
       {
         waitForFinish: 0,
+        maxItems: MAX_POSTS_PER_USER,
       }
     );
 

@@ -106,7 +106,19 @@ export async function startScraping(
     }
 
     // Start Apify run (polling-based, no webhook needed)
-    const run = await startApifyRun(username);
+    let run;
+    try {
+      run = await startApifyRun(username);
+    } catch (apifyErr) {
+      // Clean up the pending job so it doesn't block future requests
+      await supabase
+        .from("scrape_jobs")
+        .update({ status: "failed", error_message: "Failed to start scraping service" })
+        .eq("id", job.id);
+
+      console.error("startApifyRun error:", apifyErr);
+      return { data: null, error: "Failed to start analysis. Please try again." };
+    }
 
     // Update job with run ID and dataset ID
     await supabase

@@ -20,7 +20,7 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 
 ### 세션 운용
 
-**같은 세션 안에서 체이닝:** build → review → qa → ship → document-release.
+**수동 스킬 실행:** 각 스킬(review, qa, ship, document-release 등)은 사용자가 직접 요청할 때만 실행한다. 자동 체이닝하지 않는다.
 **세션 분리:** Plan→Build 전환 시, 컨텍스트 초과 시, 다른 feature branch 시.
 
 ### 문서 저장 규칙
@@ -64,19 +64,13 @@ Phase 2: Integration (cross-feature flows) — depends on 1A, 1B, 1C
 **2차 (구현 게이트, Build 세션):** 해당 Phase만 검증.
 PASS → Build, PASS WITH CHANGES → eng-plan 수정 후 Build, FAIL → 사용자에게 보고.
 
-### 자동 스프린트
+### Phase 빌드
 
-"Phase N build해줘" 요청 시 같은 세션에서 순차 실행:
+"Phase N build해줘" 요청 시:
 1. 필수 문서 읽기 (eng-plan, code-convention, ADR, DESIGN.md)
 2. /plan-eng-review 2차 → Phase 검증
 3. Build + checkpoint commit
-4. Agent: /review → 자동수정 처리, 판단 필요한 건 사용자에게
-5. Agent: /qa → 동일
-6. eng-plan Phase [DONE] 표기
-7. Agent: /ship → PR 생성
-8. Agent: /document-release → 문서 동기화
-
-**선택적 강화:** Phase가 고위험(인증, 결제, 데이터 삭제)이면 Step 4 이후 /codex review 추가.
+4. 빌드 완료 보고 → 이후 스킬(review, qa, ship 등)은 사용자가 직접 요청
 
 ### 리뷰 참조
 

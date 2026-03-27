@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { cn } from "@/lib/cn";
 
 interface PostCardProps {
-  id: string;
+  postId: string;
   outlierScore: number | null;
   textContent: string | null;
   likeCount: number;
@@ -22,7 +23,7 @@ function formatNumber(n: number): string {
 }
 
 export function PostCard({
-  id,
+  postId,
   outlierScore,
   textContent,
   likeCount,
@@ -38,6 +39,8 @@ export function PostCard({
   const threadUrl = postCode
     ? `https://www.threads.com/t/${postCode}`
     : null;
+
+  const canAnalyze = outlierScore !== null;
 
   return (
     <div className="group grid grid-cols-[80px_1fr_auto_auto] items-center gap-4 rounded-lg border border-stone-700 bg-stone-800 px-4 py-3 transition-colors duration-150 hover:border-stone-600">
@@ -86,21 +89,31 @@ export function PostCard({
         </div>
       </div>
 
-      {/* Metrics */}
-      <div
-        className="flex gap-3 text-xs text-stone-400"
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
-        <span title="Likes">{formatNumber(likeCount)}</span>
-        <span title="Reposts">{formatNumber(repostCount)}</span>
-        <span title="Replies">{formatNumber(replyCount)}</span>
+      {/* Metrics + Analyze link */}
+      <div className="flex items-center gap-3">
+        <div
+          className="flex gap-3 text-xs text-stone-400"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          <span title="Likes">{formatNumber(likeCount)}</span>
+          <span title="Reposts">{formatNumber(repostCount)}</span>
+          <span title="Replies">{formatNumber(replyCount)}</span>
+        </div>
+        {canAnalyze && (
+          <Link
+            href={`/analysis/${postId}`}
+            className="ml-2 text-xs text-stone-500 transition-colors duration-150 hover:text-primary"
+          >
+            analyze &rarr;
+          </Link>
+        )}
       </div>
 
       {/* Collection toggle */}
       {onToggleCollection && (
         <button
           type="button"
-          onClick={() => onToggleCollection(id)}
+          onClick={() => onToggleCollection(postId)}
           className={cn(
             "flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-150",
             isCollected

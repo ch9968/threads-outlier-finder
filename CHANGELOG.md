@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.1.4.0] - 2026-03-27 — Phase 2: AI Analysis Pipeline
+
+### Added
+
+- AI analysis pipeline with Vertex AI Gemini streaming for 6-dimension post analysis (hook, emotion, structure, CTA, conversation, sharing)
+- `/api/analyze` route with Zod validation, cache check, streaming response, and DB persistence
+- `/analysis/[postId]` page with progressive dimension card rendering during stream
+- `AnalysisStream` client component with streaming text decoder, error marker detection, and abort cleanup
+- `DimensionCard` and `MetadataCard` components for displaying analysis results
+- `buildAnalysisPrompt` and `parseAnalysisResponse` for structured LLM interaction
+- Vertex AI client singleton with GCP service account key support (Vercel) and ADC fallback (local)
+- 11 new unit tests for scraping cooldown logic, Apify error cleanup, and data processing paths
+- TODOS.md with P1 items for concurrent analysis deduplication
+
+### Fixed
+
+- Pending job cleanup when Apify call fails (ISSUE-001) — job no longer blocks future requests
+- Apify `maxItems` parameter now correctly passes to actor input
+- Vertex AI model ID synced between DEFAULT_MODEL and .env.example
+- `JSON.parse` on GCP_SERVICE_ACCOUNT_KEY now wrapped in try/catch with descriptive error
+- `parseAnalysisResponse` extracted outside `.map()` loop to avoid redundant parsing during streaming
+- Analysis page URL param validated as UUID via Zod
+- Analysis response parser handles edge cases (empty sections, partial streaming output)
+
 ## [0.1.3.0] - 2026-03-27 — Collection UI
 
 ### Added
