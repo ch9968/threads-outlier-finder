@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { pollApifyRun } from "@/lib/actions/scraping";
+import { toggleCollectionItem } from "@/lib/actions/collection";
 import { OutlierSlider } from "./outlier-slider";
 import { PostCard } from "./post-card";
 
@@ -24,6 +25,7 @@ interface ResultsClientProps {
   initialPosts: Post[];
   initialErrorMessage: string | null;
   isSmallSample: boolean;
+  initialCollectedPostIds: string[];
 }
 
 const POLL_INTERVAL = 3000;
@@ -34,11 +36,15 @@ export function ResultsClient({
   initialPosts,
   initialErrorMessage,
   isSmallSample,
+  initialCollectedPostIds,
 }: ResultsClientProps) {
   const [status, setStatus] = useState(initialStatus);
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [errorMessage, setErrorMessage] = useState(initialErrorMessage);
   const [threshold, setThreshold] = useState(2);
+  const [collectedPostIds, setCollectedPostIds] = useState<Set<string>>(
+    new Set(initialCollectedPostIds)
+  );
 
   const poll = useCallback(async () => {
     const result = await pollApifyRun(username);
@@ -60,6 +66,34 @@ export function ResultsClient({
       return () => clearInterval(interval);
     }
   }, [status, poll]);
+
+  const handleToggleCollection = useCallback(async (postId: string) => {
+    // Optimistic update
+    setCollectedPostIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+      }
+      return next;
+    });
+
+    const result = await toggleCollectionItem(postId);
+
+    if (result.error) {
+      // Revert on error
+      setCollectedPostIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(postId)) {
+          next.delete(postId);
+        } else {
+          next.add(postId);
+        }
+        return next;
+      });
+    }
+  }, []);
 
   // Filter posts by threshold
   const filteredPosts = posts.filter(
@@ -138,6 +172,7 @@ export function ResultsClient({
             .map((post) => (
               <PostCard
                 key={post.id}
+                id={post.id}
                 outlierScore={post.outlier_score}
                 textContent={post.text_content}
                 likeCount={post.like_count}
@@ -147,6 +182,8 @@ export function ResultsClient({
                 isReply={post.is_reply}
                 isRepost={post.is_repost}
                 postCode={post.post_code}
+                isCollected={collectedPostIds.has(post.id)}
+                onToggleCollection={handleToggleCollection}
               />
             ))}
         </div>

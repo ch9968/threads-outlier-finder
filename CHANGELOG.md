@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.3.0] - 2026-03-27 — Collection UI
+
+### Added
+
+- Collection page (`/collection`) with saved outlier posts, account filter chips, and optimistic removal
+- `toggleCollectionItem` and `removeFromCollection` server actions with UUID validation and race condition handling (23505 duplicate key)
+- `getCollectionPostIds` server action to hydrate collection state on results page
+- Heart toggle button on post cards (optimistic UI with error revert)
+- `CollectionFilter` component with pill-shaped filter chips per DESIGN.md spec
+- Collection link in results page navigation header
+- Unit tests for cn utility, scraping server actions, and middleware auth token
+
+### Changed
+
+- Post card grid updated from 3-column to 4-column layout (added collection toggle column)
+- Results page fetches collection state in parallel with posts (scoped to current account)
+- Dead test variables removed from collection test file
+
 ## [0.1.2.0] - 2026-03-27 — Apify Actor Swap + ABORTED Run Handling
 
 ### Changed

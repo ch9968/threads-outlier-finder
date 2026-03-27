@@ -1,6 +1,7 @@
 import { cn } from "@/lib/cn";
 
 interface PostCardProps {
+  id: string;
   outlierScore: number | null;
   textContent: string | null;
   likeCount: number;
@@ -10,6 +11,8 @@ interface PostCardProps {
   isReply: boolean;
   isRepost: boolean;
   postCode: string | null;
+  isCollected?: boolean;
+  onToggleCollection?: (postId: string) => void;
 }
 
 function formatNumber(n: number): string {
@@ -19,6 +22,7 @@ function formatNumber(n: number): string {
 }
 
 export function PostCard({
+  id,
   outlierScore,
   textContent,
   likeCount,
@@ -28,13 +32,15 @@ export function PostCard({
   isReply,
   isRepost,
   postCode,
+  isCollected = false,
+  onToggleCollection,
 }: PostCardProps) {
   const threadUrl = postCode
     ? `https://www.threads.com/t/${postCode}`
     : null;
 
   return (
-    <div className="group grid grid-cols-[80px_1fr_auto] items-center gap-4 rounded-lg border border-stone-700 bg-stone-800 px-4 py-3 transition-colors duration-150 hover:border-stone-600">
+    <div className="group grid grid-cols-[80px_1fr_auto_auto] items-center gap-4 rounded-lg border border-stone-700 bg-stone-800 px-4 py-3 transition-colors duration-150 hover:border-stone-600">
       {/* Outlier score */}
       <div className="text-right">
         {outlierScore !== null ? (
@@ -89,6 +95,34 @@ export function PostCard({
         <span title="Reposts">{formatNumber(repostCount)}</span>
         <span title="Replies">{formatNumber(replyCount)}</span>
       </div>
+
+      {/* Collection toggle */}
+      {onToggleCollection && (
+        <button
+          type="button"
+          onClick={() => onToggleCollection(id)}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-150",
+            isCollected
+              ? "text-primary hover:text-primary-hover"
+              : "text-stone-600 hover:text-stone-400"
+          )}
+          title={isCollected ? "Remove from collection" : "Add to collection"}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill={isCollected ? "currentColor" : "none"}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

@@ -231,7 +231,7 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 산출: 개별 게시물 AI 분석 동작
 ```
 
-### Phase 3A: Collection UI (~10min CC)
+### Phase 3A: Collection UI (~10min CC) [DONE]
 
 ```
 범위:
@@ -365,7 +365,7 @@ Phase 2와 3A는 별도 워크스페이스에서 병렬 빌드 가능. 둘 다 P
 |---|---|---|---|
 | Phase 0 | 2시간 | ~15분 | [DONE] |
 | Phase 1 | 1주 | ~30분 | [DONE] |
-| Phase 2 + 3A | 4일 | ~20min (병렬) | 동시 빌드 |
+| Phase 2 + 3A | 4일 | ~20min (병렬) | 3A [DONE], Phase 2 남음 |
 | Phase 3B | 2일 | ~15분 | |
 | Phase 4 | 1일 | ~15분 | |
 | **Total** | **~3주** | **~50분 (남은 분)** | |

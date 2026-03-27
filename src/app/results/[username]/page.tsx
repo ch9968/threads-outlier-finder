@@ -51,6 +51,7 @@ export default async function ResultsPage({ params }: PageProps) {
   }> = [];
 
   let smallSample = false;
+  let collectedPostIds: string[] = [];
 
   if (job.status === "ready") {
     const { data: account } = await supabase
@@ -60,20 +61,26 @@ export default async function ResultsPage({ params }: PageProps) {
       .single();
 
     if (account) {
-      const { data: fetchedPosts } = await supabase
-        .from("posts")
-        .select(
-          "id, outlier_score, text_content, like_count, repost_count, reply_count, media_type, is_reply, is_repost, post_code, posted_at"
-        )
-        .eq("account_id", account.id)
-        .order("outlier_score", { ascending: false, nullsFirst: false });
+      const [postsResult, collectionResult] = await Promise.all([
+        supabase
+          .from("posts")
+          .select(
+            "id, outlier_score, text_content, like_count, repost_count, reply_count, media_type, is_reply, is_repost, post_code, posted_at"
+          )
+          .eq("account_id", account.id)
+          .order("outlier_score", { ascending: false, nullsFirst: false }),
+        supabase
+          .from("collection_items")
+          .select("post_id, posts!inner(account_id)")
+          .eq("posts.account_id", account.id),
+      ]);
 
-      if (fetchedPosts) {
-        posts = fetchedPosts;
+      if (postsResult.data) {
+        posts = postsResult.data;
 
         // Check if small sample baseline was used
         smallSample = isSmallSampleBaseline(
-          fetchedPosts.map((p) => ({
+          postsResult.data.map((p) => ({
             id: p.id,
             totalEngagement: p.like_count + p.repost_count + p.reply_count,
             isReply: p.is_reply,
@@ -81,6 +88,12 @@ export default async function ResultsPage({ params }: PageProps) {
             postedAt: new Date(p.posted_at),
           }))
         );
+      }
+
+      if (collectionResult.error) {
+        console.error("Failed to fetch collection state:", collectionResult.error);
+      } else if (collectionResult.data) {
+        collectedPostIds = collectionResult.data.map((item) => item.post_id);
       }
     }
   }
@@ -96,12 +109,20 @@ export default async function ResultsPage({ params }: PageProps) {
           >
             &larr; Back
           </Link>
-          <h1
-            className="text-lg font-bold tracking-tight text-stone-100"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            Santiago
-          </h1>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/collection"
+              className="text-sm text-stone-500 transition-colors duration-150 hover:text-stone-300"
+            >
+              Collection
+            </Link>
+            <h1
+              className="text-lg font-bold tracking-tight text-stone-100"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              Santiago
+            </h1>
+          </div>
         </div>
 
         {/* Account header */}
@@ -126,6 +147,7 @@ export default async function ResultsPage({ params }: PageProps) {
           initialPosts={posts}
           initialErrorMessage={job.error_message}
           isSmallSample={smallSample}
+          initialCollectedPostIds={collectedPostIds}
         />
       </div>
     </div>
