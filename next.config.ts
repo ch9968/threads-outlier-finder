@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Strict mode for catching bugs early
+  serverExternalPackages: ["apify-client"],
 };
 
 export default nextConfig;

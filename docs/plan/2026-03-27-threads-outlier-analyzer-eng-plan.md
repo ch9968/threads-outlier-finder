@@ -212,7 +212,6 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 0 완료
 산출: 스크래핑 → 결과 표시 동작하는 앱
-예상 LOC: ~800 (실제: ~1,200)
 ```
 
 ### Phase 2: AI Analysis (~20min CC)
@@ -230,7 +229,6 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 1 완료
 산출: 개별 게시물 AI 분석 동작
-예상 LOC: ~500
 ```
 
 ### Phase 3A: Collection UI (~10min CC)
@@ -244,7 +242,6 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 1 완료 (게시물 데이터만 필요)
 산출: 컬렉션 CRUD + UI 동작
-예상 LOC: ~300
 병렬: Phase 2와 동시 빌드 가능
 ```
 
@@ -260,7 +257,6 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 2 + Phase 3A 완료 (개별 분석 결과 + 컬렉션이 패턴 분석의 입력)
 산출: 패턴 분석 동작
-예상 LOC: ~300
 ```
 
 ### Phase 4: Deploy & Polish (~15min CC)
@@ -275,7 +271,6 @@ Minor Decision: 1시간 쿨다운 추가 (동일 username 비용 통제)
 
 의존: Phase 3B 완료
 산출: 배포된 프로덕션 앱
-예상 LOC: ~300
 ```
 
 ## 디렉토리 구조
@@ -374,4 +369,3 @@ Phase 2와 3A는 별도 워크스페이스에서 병렬 빌드 가능. 둘 다 P
 | Phase 3B | 2일 | ~15분 | |
 | Phase 4 | 1일 | ~15분 | |
 | **Total** | **~3주** | **~50분 (남은 분)** | |
-| 예상 LOC | | ~2,350 | |

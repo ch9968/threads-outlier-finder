@@ -1,19 +1,18 @@
 import { describe, it, expect } from "vitest";
 import {
-  ApifyProfileSchema,
   ApifyPostSchema,
-  ApifyDatasetItemSchema,
   ApifyActorInputSchema,
   ApifyWebhookPayloadSchema,
   normalizeMediaType,
   calculateTotalEngagement,
+  extractProfileFromPost,
   APIFY_ACTOR_ID,
   MAX_POSTS_PER_USER,
 } from "../../src/lib/apify/schema";
 
 describe("APIFY_ACTOR_ID", () => {
-  it("should be automation-lab/threads-scraper", () => {
-    expect(APIFY_ACTOR_ID).toBe("automation-lab/threads-scraper");
+  it("should be futurizerush/meta-threads-scraper", () => {
+    expect(APIFY_ACTOR_ID).toBe("futurizerush/meta-threads-scraper");
   });
 
   it("should have MAX_POSTS_PER_USER of 200", () => {
@@ -21,201 +20,172 @@ describe("APIFY_ACTOR_ID", () => {
   });
 });
 
-describe("ApifyProfileSchema", () => {
-  const validProfile = {
-    type: "profile" as const,
-    username: "zuck",
-    fullName: "Mark Zuckerberg",
-    biography: "I build stuff",
-    followerCount: 5439932,
-    isVerified: true,
-    profilePicUrl: "https://scontent.cdninstagram.com/pic.jpg",
-    url: "https://www.threads.com/@zuck",
-    userId: "314216",
-    scrapedAt: "2026-03-05T22:33:31.392Z",
-  };
-
-  it("should parse a valid profile", () => {
-    const result = ApifyProfileSchema.parse(validProfile);
-    expect(result.username).toBe("zuck");
-    expect(result.followerCount).toBe(5439932);
-    expect(result.type).toBe("profile");
-  });
-
-  it("should require type to be 'profile'", () => {
-    expect(() =>
-      ApifyProfileSchema.parse({ ...validProfile, type: "post" })
-    ).toThrow();
-  });
-
-  it("should require username", () => {
-    const { username, ...noUsername } = validProfile;
-    expect(() => ApifyProfileSchema.parse(noUsername)).toThrow();
-  });
-
-  it("should allow null/optional fields", () => {
-    const minimal = {
-      type: "profile" as const,
-      username: "test",
-    };
-    const result = ApifyProfileSchema.parse(minimal);
-    expect(result.username).toBe("test");
-    expect(result.fullName).toBeUndefined();
-    expect(result.followerCount).toBeUndefined();
-  });
-
-  it("should allow null fullName", () => {
-    const result = ApifyProfileSchema.parse({
-      ...validProfile,
-      fullName: null,
-    });
-    expect(result.fullName).toBeNull();
-  });
-});
-
 describe("ApifyPostSchema", () => {
   const validPost = {
-    type: "post" as const,
-    postId: "3798699639419459235",
-    code: "DS3sTIYAFaj",
-    url: "https://www.threads.com/t/DS3sTIYAFaj",
-    username: "zuck",
-    fullName: "Mark Zuckerberg",
-    isVerified: true,
-    text: "Hello Threads!",
-    hashtags: ["tech"],
-    mentions: ["@meta"],
+    post_url: "https://www.threads.com/@joshproductletter/post/DWYY0vXiaTS",
+    post_code: "DWYY0vXiaTS",
+    text_content: "Hello Threads!",
+    created_at: "2026-03-27T08:24:03+00:00",
+    created_at_timestamp: 1774599843,
+    like_count: 8,
+    reply_count: 3,
+    repost_count: 0,
+    quote_count: 0,
+    share_count: null,
+    view_count: 200,
+    has_media: false,
+    media_type: "text",
+    media_url: "",
+    media_urls: [],
+    hashtags: [],
+    mentions: ["pauljo.dev"],
     urls: [],
-    likeCount: 4969,
-    replyCount: 1034,
-    repostCount: 372,
-    quoteCount: 277,
-    mediaType: "text" as const,
-    media: [],
-    isReply: false,
-    isRepost: false,
-    repostedFrom: null,
-    timestamp: 1764792059,
-    date: "2025-12-03T20:00:59.000Z",
-    scrapedAt: "2026-03-05T22:36:51.325Z",
+    is_pinned: false,
+    is_edited: false,
+    scraped_at: "2026-03-27T08:53:15.418782+00:00",
+    username: "joshproductletter",
+    display_name: "Josh",
+    profile_url: "https://www.threads.com/@joshproductletter",
+    is_verified: false,
+    followers_count: 33631,
+    bio: "Builder",
+    profile_pic_url: "https://scontent.cdninstagram.com/pic.jpg",
+    external_links: ["https://example.com"],
+    bio_links: ["https://example.com"],
   };
 
   it("should parse a valid post", () => {
     const result = ApifyPostSchema.parse(validPost);
-    expect(result.postId).toBe("3798699639419459235");
-    expect(result.likeCount).toBe(4969);
-    expect(result.type).toBe("post");
+    expect(result.post_code).toBe("DWYY0vXiaTS");
+    expect(result.like_count).toBe(8);
+    expect(result.username).toBe("joshproductletter");
   });
 
-  it("should require type to be 'post'", () => {
-    expect(() =>
-      ApifyPostSchema.parse({ ...validPost, type: "profile" })
-    ).toThrow();
+  it("should require post_code", () => {
+    const { post_code, ...noCode } = validPost;
+    expect(() => ApifyPostSchema.parse(noCode)).toThrow();
+  });
+
+  it("should require username", () => {
+    const { username, ...noUsername } = validPost;
+    expect(() => ApifyPostSchema.parse(noUsername)).toThrow();
+  });
+
+  it("should require created_at_timestamp", () => {
+    const { created_at_timestamp, ...noTimestamp } = validPost;
+    expect(() => ApifyPostSchema.parse(noTimestamp)).toThrow();
   });
 
   it("should default engagement counts to 0", () => {
-    const { likeCount, replyCount, repostCount, quoteCount, ...rest } =
+    const { like_count, reply_count, repost_count, quote_count, ...rest } =
       validPost;
     const result = ApifyPostSchema.parse(rest);
-    expect(result.likeCount).toBe(0);
-    expect(result.replyCount).toBe(0);
-    expect(result.repostCount).toBe(0);
-    expect(result.quoteCount).toBe(0);
+    expect(result.like_count).toBe(0);
+    expect(result.reply_count).toBe(0);
+    expect(result.repost_count).toBe(0);
+    expect(result.quote_count).toBe(0);
   });
 
-  it("should default mediaType to text", () => {
-    const { mediaType, ...rest } = validPost;
+  it("should default media_type to text", () => {
+    const { media_type, ...rest } = validPost;
     const result = ApifyPostSchema.parse(rest);
-    expect(result.mediaType).toBe("text");
+    expect(result.media_type).toBe("text");
   });
 
   it("should default arrays to empty", () => {
-    const { hashtags, mentions, urls, media, ...rest } = validPost;
+    const { hashtags, mentions, urls, media_urls, ...rest } = validPost;
     const result = ApifyPostSchema.parse(rest);
     expect(result.hashtags).toEqual([]);
     expect(result.mentions).toEqual([]);
     expect(result.urls).toEqual([]);
-    expect(result.media).toEqual([]);
-  });
-
-  it("should default isReply and isRepost to false", () => {
-    const { isReply, isRepost, ...rest } = validPost;
-    const result = ApifyPostSchema.parse(rest);
-    expect(result.isReply).toBe(false);
-    expect(result.isRepost).toBe(false);
+    expect(result.media_urls).toEqual([]);
   });
 
   it("should reject negative engagement counts", () => {
     expect(() =>
-      ApifyPostSchema.parse({ ...validPost, likeCount: -1 })
+      ApifyPostSchema.parse({ ...validPost, like_count: -1 })
     ).toThrow();
   });
 
-  it("should allow null text", () => {
-    const result = ApifyPostSchema.parse({ ...validPost, text: null });
-    expect(result.text).toBeNull();
+  it("should allow null text_content", () => {
+    const result = ApifyPostSchema.parse({ ...validPost, text_content: null });
+    expect(result.text_content).toBeNull();
   });
 
-  it("should parse photo mediaType", () => {
+  it("should parse photo media_type", () => {
     const result = ApifyPostSchema.parse({
       ...validPost,
-      mediaType: "photo",
+      media_type: "photo",
     });
-    expect(result.mediaType).toBe("photo");
+    expect(result.media_type).toBe("photo");
   });
 
-  it("should parse carousel mediaType", () => {
+  it("should allow null share_count and view_count", () => {
     const result = ApifyPostSchema.parse({
       ...validPost,
-      mediaType: "carousel",
+      share_count: null,
+      view_count: null,
     });
-    expect(result.mediaType).toBe("carousel");
+    expect(result.share_count).toBeNull();
+    expect(result.view_count).toBeNull();
+  });
+
+  it("should parse minimal post (only required fields)", () => {
+    const minimal = {
+      post_code: "ABC123",
+      created_at_timestamp: 1774599843,
+      username: "test",
+    };
+    const result = ApifyPostSchema.parse(minimal);
+    expect(result.post_code).toBe("ABC123");
+    expect(result.like_count).toBe(0);
+    expect(result.is_verified).toBe(false);
   });
 });
 
-describe("ApifyDatasetItemSchema (discriminated union)", () => {
-  it("should parse a profile by type field", () => {
-    const item = { type: "profile" as const, username: "test" };
-    const result = ApifyDatasetItemSchema.parse(item);
-    expect(result.type).toBe("profile");
+describe("extractProfileFromPost", () => {
+  it("should extract profile data from a post item", () => {
+    const post = ApifyPostSchema.parse({
+      post_code: "ABC",
+      created_at_timestamp: 1774599843,
+      username: "JoshProductLetter",
+      display_name: "Josh",
+      profile_pic_url: "https://example.com/pic.jpg",
+      followers_count: 33631,
+      is_verified: true,
+      bio: "Builder",
+    });
+
+    const profile = extractProfileFromPost(post);
+    expect(profile.username).toBe("joshproductletter"); // lowercased
+    expect(profile.displayName).toBe("Josh");
+    expect(profile.followerCount).toBe(33631);
+    expect(profile.isVerified).toBe(true);
+    expect(profile.biography).toBe("Builder");
   });
 
-  it("should parse a post by type field", () => {
-    const item = {
-      type: "post" as const,
-      postId: "123",
+  it("should handle missing optional profile fields", () => {
+    const post = ApifyPostSchema.parse({
+      post_code: "ABC",
+      created_at_timestamp: 1774599843,
       username: "test",
-      timestamp: 1234567890,
-      date: "2025-01-01T00:00:00.000Z",
-    };
-    const result = ApifyDatasetItemSchema.parse(item);
-    expect(result.type).toBe("post");
-  });
+    });
 
-  it("should reject unknown type", () => {
-    expect(() =>
-      ApifyDatasetItemSchema.parse({ type: "unknown", username: "test" })
-    ).toThrow();
+    const profile = extractProfileFromPost(post);
+    expect(profile.displayName).toBeNull();
+    expect(profile.profilePicUrl).toBeNull();
+    expect(profile.followerCount).toBeNull();
+    expect(profile.biography).toBeNull();
   });
 });
 
 describe("ApifyActorInputSchema", () => {
   it("should parse valid input", () => {
     const result = ApifyActorInputSchema.parse({
-      mode: "posts",
       usernames: ["zuck"],
       maxPosts: 50,
-      includeProfile: true,
     });
-    expect(result.mode).toBe("posts");
     expect(result.maxPosts).toBe(50);
-  });
-
-  it("should default mode to posts", () => {
-    const result = ApifyActorInputSchema.parse({
-      usernames: ["zuck"],
-    });
-    expect(result.mode).toBe("posts");
   });
 
   it("should default maxPosts to 200", () => {
@@ -223,13 +193,6 @@ describe("ApifyActorInputSchema", () => {
       usernames: ["zuck"],
     });
     expect(result.maxPosts).toBe(200);
-  });
-
-  it("should default includeProfile to true", () => {
-    const result = ApifyActorInputSchema.parse({
-      usernames: ["zuck"],
-    });
-    expect(result.includeProfile).toBe(true);
   });
 
   it("should reject maxPosts > 200", () => {
@@ -264,12 +227,12 @@ describe("ApifyWebhookPayloadSchema", () => {
     createdAt: "2026-03-05T22:33:31.392Z",
     eventType: "ACTOR.RUN.SUCCEEDED" as const,
     eventData: {
-      actorId: "automation-lab/threads-scraper",
+      actorId: "futurizerush/meta-threads-scraper",
       actorRunId: "run123",
     },
     resource: {
       id: "run123",
-      actId: "automation-lab/threads-scraper",
+      actId: "futurizerush/meta-threads-scraper",
       status: "SUCCEEDED" as const,
       defaultDatasetId: "dataset123",
     },
@@ -347,43 +310,37 @@ describe("normalizeMediaType", () => {
 });
 
 describe("calculateTotalEngagement", () => {
-  it("should sum likeCount + repostCount + replyCount", () => {
+  it("should sum like_count + repost_count + reply_count", () => {
     const post = ApifyPostSchema.parse({
-      type: "post",
-      postId: "1",
+      post_code: "1",
       username: "test",
-      likeCount: 100,
-      replyCount: 50,
-      repostCount: 25,
-      quoteCount: 10,
-      timestamp: 1234567890,
-      date: "2025-01-01T00:00:00.000Z",
+      like_count: 100,
+      reply_count: 50,
+      repost_count: 25,
+      quote_count: 10,
+      created_at_timestamp: 1234567890,
     });
     expect(calculateTotalEngagement(post)).toBe(175);
   });
 
-  it("should NOT include quoteCount in total", () => {
+  it("should NOT include quote_count in total", () => {
     const post = ApifyPostSchema.parse({
-      type: "post",
-      postId: "1",
+      post_code: "1",
       username: "test",
-      likeCount: 0,
-      replyCount: 0,
-      repostCount: 0,
-      quoteCount: 100,
-      timestamp: 1234567890,
-      date: "2025-01-01T00:00:00.000Z",
+      like_count: 0,
+      reply_count: 0,
+      repost_count: 0,
+      quote_count: 100,
+      created_at_timestamp: 1234567890,
     });
     expect(calculateTotalEngagement(post)).toBe(0);
   });
 
   it("should return 0 for zero engagement", () => {
     const post = ApifyPostSchema.parse({
-      type: "post",
-      postId: "1",
+      post_code: "1",
       username: "test",
-      timestamp: 1234567890,
-      date: "2025-01-01T00:00:00.000Z",
+      created_at_timestamp: 1234567890,
     });
     expect(calculateTotalEngagement(post)).toBe(0);
   });

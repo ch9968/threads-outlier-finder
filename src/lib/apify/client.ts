@@ -17,38 +17,37 @@ function getClient(): ApifyClient {
 
 /**
  * Start a scraping run for a Threads username.
- * Returns the Apify run object (contains id, defaultDatasetId, etc.).
+ * Uses polling instead of webhooks (webhooks require a public URL).
  */
 export async function startApifyRun(
-  username: string,
-  webhookUrl: string
-): Promise<{ id: string }> {
+  username: string
+): Promise<{ id: string; datasetId: string }> {
   const run = await getClient()
     .actor(APIFY_ACTOR_ID)
     .start(
       {
-        mode: "posts",
         usernames: [username],
         maxPosts: MAX_POSTS_PER_USER,
-        includeProfile: true,
       },
       {
         waitForFinish: 0,
-        webhooks: [
-          {
-            eventTypes: [
-              "ACTOR.RUN.SUCCEEDED",
-              "ACTOR.RUN.FAILED",
-              "ACTOR.RUN.ABORTED",
-              "ACTOR.RUN.TIMED_OUT",
-            ],
-            requestUrl: webhookUrl,
-          },
-        ],
       }
     );
 
-  return { id: run.id };
+  return { id: run.id, datasetId: run.defaultDatasetId };
+}
+
+/**
+ * Get the status of an Apify run.
+ */
+export async function getApifyRunStatus(
+  runId: string
+): Promise<{ status: string; datasetId: string }> {
+  const run = await getClient().run(runId).get();
+  if (!run) {
+    throw new Error(`Apify run ${runId} not found`);
+  }
+  return { status: run.status, datasetId: run.defaultDatasetId };
 }
 
 /**

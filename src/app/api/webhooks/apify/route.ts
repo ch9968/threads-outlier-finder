@@ -3,9 +3,9 @@ import { supabase } from "@/lib/supabase/client";
 import { fetchDatasetItems } from "@/lib/apify/client";
 import {
   ApifyWebhookPayloadSchema,
-  ApifyDatasetItemSchema,
+  ApifyPostSchema,
   normalizeMediaType,
-  type ApifyProfile,
+  extractProfileFromPost,
   type ApifyPost,
 } from "@/lib/apify/schema";
 import { calculateOutlierScores } from "@/lib/outlier";
@@ -73,10 +73,14 @@ export async function POST(request: NextRequest) {
   }
 
   // Handle failure events
-  if (payload.eventType !== "ACTOR.RUN.SUCCEEDED") {
+  // ABORTED runs may have partial data — let them through to the success path
+  const hasData =
+    payload.eventType === "ACTOR.RUN.SUCCEEDED" ||
+    payload.eventType === "ACTOR.RUN.ABORTED";
+
+  if (!hasData) {
     const errorMessages: Record<string, string> = {
       "ACTOR.RUN.FAILED": "Scraping failed. The account may be private or not exist.",
-      "ACTOR.RUN.ABORTED": "Scraping was aborted.",
       "ACTOR.RUN.TIMED_OUT": "Scraping timed out. Please try again.",
     };
 
@@ -116,17 +120,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse items through Zod (skip malformed rows)
-    const profiles: ApifyProfile[] = [];
     const posts: ApifyPost[] = [];
 
     for (const item of rawItems) {
-      const result = ApifyDatasetItemSchema.safeParse(item);
+      const result = ApifyPostSchema.safeParse(item);
       if (result.success) {
-        if (result.data.type === "profile") {
-          profiles.push(result.data);
-        } else {
-          posts.push(result.data);
-        }
+        posts.push(result.data);
       } else {
         console.warn("Skipping malformed dataset item:", result.error.flatten());
       }
@@ -144,21 +143,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Upsert account from profile data
-    const profile = profiles[0];
-    const username = posts[0].username.toLowerCase();
+    // Extract profile from first post (denormalized)
+    const profile = extractProfileFromPost(posts[0]);
 
     const { data: account, error: accountError } = await supabase
       .from("accounts")
       .upsert(
         {
-          username,
-          display_name: profile?.fullName ?? null,
-          profile_pic_url: profile?.profilePicUrl ?? null,
-          follower_count: profile?.followerCount ?? null,
-          is_verified: profile?.isVerified ?? false,
-          biography: profile?.biography ?? null,
-          user_id: profile?.userId ?? null,
+          username: profile.username,
+          display_name: profile.displayName,
+          profile_pic_url: profile.profilePicUrl,
+          follower_count: profile.followerCount,
+          is_verified: profile.isVerified,
+          biography: profile.biography,
           last_scraped_at: new Date().toISOString(),
         },
         { onConflict: "username" }
@@ -182,17 +179,17 @@ export async function POST(request: NextRequest) {
     // Batch upsert posts
     const postRows = posts.map((p) => ({
       account_id: account.id,
-      apify_post_id: p.postId,
-      post_code: p.code ?? null,
-      text_content: p.text ?? null,
-      media_type: normalizeMediaType(p.mediaType),
-      like_count: p.likeCount,
-      repost_count: p.repostCount,
-      reply_count: p.replyCount,
-      quote_count: p.quoteCount,
-      is_reply: p.isReply,
-      is_repost: p.isRepost,
-      posted_at: new Date(p.timestamp * 1000).toISOString(),
+      apify_post_id: p.post_code,
+      post_code: p.post_code,
+      text_content: p.text_content ?? null,
+      media_type: normalizeMediaType(p.media_type),
+      like_count: p.like_count,
+      repost_count: p.repost_count,
+      reply_count: p.reply_count,
+      quote_count: p.quote_count,
+      is_reply: false,
+      is_repost: false,
+      posted_at: new Date(p.created_at_timestamp * 1000).toISOString(),
       raw_data: p as unknown as Record<string, unknown>,
     }));
 
@@ -231,8 +228,6 @@ export async function POST(request: NextRequest) {
 
       const scores = calculateOutlierScores(postsForScoring);
 
-      // Update outlier scores in batches to avoid overwhelming the DB
-      // with 200 simultaneous requests (Supabase JS lacks batch UPDATE)
       const BATCH_SIZE = 25;
       for (let i = 0; i < scores.length; i += BATCH_SIZE) {
         const batch = scores.slice(i, i + BATCH_SIZE);

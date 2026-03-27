@@ -4,98 +4,102 @@ import { z } from "zod";
 // Actor Configuration
 // ---------------------------------------------------------------------------
 
-export const APIFY_ACTOR_ID = "automation-lab/threads-scraper";
+export const APIFY_ACTOR_ID = "futurizerush/meta-threads-scraper";
 export const MAX_POSTS_PER_USER = 200;
 
 // ---------------------------------------------------------------------------
-// Apify Actor Output Schemas
-// Based on: https://apify.com/automation-lab/threads-scraper
+// Apify Actor Output Schema
+// Based on actual API response from futurizerush/meta-threads-scraper
+// Profile data is denormalized into every post item (no separate profile rows)
 // ---------------------------------------------------------------------------
 
 /**
- * Profile row from the actor output dataset.
- * Returned when includeProfile is true. Identified by type: "profile".
- */
-export const ApifyProfileSchema = z.object({
-  type: z.literal("profile"),
-  username: z.string(),
-  fullName: z.string().nullable().optional(),
-  biography: z.string().nullable().optional(),
-  followerCount: z.number().int().nonnegative().nullable().optional(),
-  isVerified: z.boolean().optional(),
-  profilePicUrl: z.string().url().nullable().optional(),
-  url: z.string().url().optional(),
-  userId: z.string().optional(),
-  scrapedAt: z.string().datetime().optional(),
-});
-
-export type ApifyProfile = z.infer<typeof ApifyProfileSchema>;
-
-/**
- * Post row from the actor output dataset.
- * Identified by type: "post".
+ * Single dataset item from the actor output.
+ * Each item is a post with profile data embedded.
  */
 export const ApifyPostSchema = z.object({
-  type: z.literal("post"),
+  // Post identity
+  post_url: z.string().optional(),
+  post_code: z.string(),
+  text_content: z.string().nullable().optional(),
 
-  // Identity
-  postId: z.string(),
-  code: z.string().optional(),
-  url: z.string().url().optional(),
+  // Timestamps
+  created_at: z.string().optional(),
+  created_at_timestamp: z.number(),
 
-  // Author (denormalized)
-  username: z.string(),
-  fullName: z.string().nullable().optional(),
-  isVerified: z.boolean().optional(),
+  // Engagement metrics
+  like_count: z.number().int().nonnegative().default(0),
+  reply_count: z.number().int().nonnegative().default(0),
+  repost_count: z.number().int().nonnegative().default(0),
+  quote_count: z.number().int().nonnegative().default(0),
+  share_count: z.number().nullable().optional(),
+  view_count: z.number().nullable().optional(),
 
-  // Content
-  text: z.string().nullable().optional(),
+  // Media
+  has_media: z.boolean().default(false),
+  media_type: z.string().catch("text"),
+  media_url: z.string().optional(),
+  media_urls: z.array(z.string()).default([]),
+
+  // Content metadata
   hashtags: z.array(z.string()).default([]),
   mentions: z.array(z.string()).default([]),
   urls: z.array(z.string()).default([]),
+  is_pinned: z.boolean().default(false),
+  is_edited: z.boolean().default(false),
 
-  // Engagement metrics
-  likeCount: z.number().int().nonnegative().default(0),
-  replyCount: z.number().int().nonnegative().default(0),
-  repostCount: z.number().int().nonnegative().default(0),
-  quoteCount: z.number().int().nonnegative().default(0),
+  // Denormalized profile data
+  username: z.string(),
+  display_name: z.string().nullable().optional(),
+  profile_url: z.string().optional(),
+  is_verified: z.boolean().default(false),
+  followers_count: z.number().int().nonnegative().nullable().optional(),
+  bio: z.string().nullable().optional(),
+  profile_pic_url: z.string().nullable().optional(),
+  external_links: z.array(z.string()).default([]),
+  bio_links: z.array(z.string()).default([]),
 
-  // Media — use catch() to gracefully handle unknown types (e.g. "sticker")
-  // instead of failing validation and dropping the entire post
-  mediaType: z.string().catch("text"),
-  media: z.array(z.unknown()).default([]),
-
-  // Metadata
-  isReply: z.boolean().default(false),
-  isRepost: z.boolean().default(false),
-  repostedFrom: z.string().nullable().optional(),
-  timestamp: z.number(),
-  date: z.string(),
-  scrapedAt: z.string().datetime().optional(),
+  // Scraping metadata
+  scraped_at: z.string().optional(),
 });
 
 export type ApifyPost = z.infer<typeof ApifyPostSchema>;
 
-/**
- * A dataset item can be either a profile row or a post row.
- * Distinguished by the `type` field.
- */
-export const ApifyDatasetItemSchema = z.discriminatedUnion("type", [
-  ApifyProfileSchema,
-  ApifyPostSchema,
-]);
+// ---------------------------------------------------------------------------
+// Profile extraction helper
+// ---------------------------------------------------------------------------
 
-export type ApifyDatasetItem = z.infer<typeof ApifyDatasetItemSchema>;
+/**
+ * Profile data extracted from the first post item.
+ * The new actor embeds profile data in every post, so we extract once.
+ */
+export interface ExtractedProfile {
+  username: string;
+  displayName: string | null;
+  profilePicUrl: string | null;
+  followerCount: number | null;
+  isVerified: boolean;
+  biography: string | null;
+}
+
+export function extractProfileFromPost(post: ApifyPost): ExtractedProfile {
+  return {
+    username: post.username.toLowerCase(),
+    displayName: post.display_name ?? null,
+    profilePicUrl: post.profile_pic_url ?? null,
+    followerCount: post.followers_count ?? null,
+    isVerified: post.is_verified,
+    biography: post.bio ?? null,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Actor Input Schema
 // ---------------------------------------------------------------------------
 
 export const ApifyActorInputSchema = z.object({
-  mode: z.enum(["profile", "posts", "search"]).default("posts"),
   usernames: z.array(z.string().min(1)).min(1),
   maxPosts: z.number().int().min(1).max(200).default(200),
-  includeProfile: z.boolean().default(true),
 });
 
 export type ApifyActorInput = z.infer<typeof ApifyActorInputSchema>;
@@ -156,7 +160,7 @@ export type ApifyWebhookPayload = z.infer<typeof ApifyWebhookPayloadSchema>;
 
 /**
  * Map Apify mediaType to our DB media_type.
- * Apify uses "photo" while we store "image" for consistency.
+ * The new actor uses "photo" for images.
  */
 export function normalizeMediaType(
   apifyMediaType: string | undefined
@@ -182,5 +186,5 @@ export function normalizeMediaType(
  * Matches the DB formula: like_count + repost_count + reply_count
  */
 export function calculateTotalEngagement(post: ApifyPost): number {
-  return post.likeCount + post.repostCount + post.replyCount;
+  return post.like_count + post.repost_count + post.reply_count;
 }

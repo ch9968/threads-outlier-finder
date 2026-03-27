@@ -6,12 +6,11 @@ Available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-desig
 /design-consultation, /review, /ship, /land-and-deploy, /canary, /benchmark, /browse,
 /qa, /qa-only, /design-review, /setup-browser-cookies, /setup-deploy, /retro,
 /investigate, /document-release, /codex, /cso, /autoplan, /careful, /freeze, /guard,
-/unfreeze, /gstack-upgrade.
+/unfreeze, /gstack-upgrade, /connect-chrome.
 
 ### 핵심 원칙
 
-**Boil the Lake:** AI 코딩에서 완전한 구현의 비용은 거의 0이다. 90% 구현과 100%
-구현의 차이가 수십 줄이면, 항상 100%를 선택한다. 테스트, 에지 케이스, 에러 핸들링을
+**Boil the Lake:** AI 코딩에서 완전한 구현의 비용은 거의 0이다. 90% 구현과 100% 구현의 차이가 수십 줄이면, 항상 100%를 선택한다. 테스트, 에지 케이스, 에러 핸들링을
 "follow-up PR"로 미루지 않는다.
 
 **Search Before Building:** 새로운 패턴이나 인프라를 만들기 전에 반드시 기존 해법을
@@ -77,12 +76,32 @@ PASS → Build, PASS WITH CHANGES → eng-plan 수정 후 Build, FAIL → 사용
 7. Agent: /ship → PR 생성
 8. Agent: /document-release → 문서 동기화
 
-**병렬 Phase:** "Phase 1A, 1B 병렬 build해줘" 시 각 Phase를 별도 워크스페이스에서 실행. 사용자가 Conductor에서 워크스페이스를 나눠 요청한다.
 **선택적 강화:** Phase가 고위험(인증, 결제, 데이터 삭제)이면 Step 4 이후 /codex review 추가.
 
 ### 리뷰 참조
 
 /review 시 반드시 읽고 위반 체크: `docs/code-convention.md`, `docs/adr/*.md`, `DESIGN.md` (존재 시).
+
+### 외부 API 사전 검증 (필수)
+
+코드를 한 줄이라도 작성하기 전에, 외부 API의 실제 응답을 반드시 먼저 확인한다:
+- API를 직접 호출해서 실제 응답 데이터의 구조, 양, 품질을 확인한다 (Postman 역할)
+- 스키마만 맞추고 넘어가지 않는다. 실제 데이터가 충분히 오는지, 기대한 필드가 다 있는지 확인한다
+- Apify actor 등 외부 서비스는 테스트 호출 → 응답 확인 → 비교표 작성 → 사용자 승인 순서로 진행한다
+- 이 단계를 건너뛰고 빌드하는 것은 금지한다
+
+### E2E 검증 규칙
+
+**테스트 데이터 선택:** e2e 테스트는 반드시 충분한 데이터가 있는 실제 계정/엔티티로 검증한다.
+"동작하는지만 확인"이 아니라, 모든 범위를 커버할 수 있는 대표 데이터를 선택한다.
+예: Threads 분석이면 게시물이 100개 이상인 활발한 계정, 다양한 미디어 타입 포함.
+
+빌드 완료 후 e2e 테스트는 반드시 **실제 동작하는 데이터**로 검증한다:
+- 외부 API 연동이 있으면 실제 API 호출 → 응답 → DB 저장 → UI 표시까지 전체 흐름 확인
+- 테스트 계정은 충분한 데이터가 있는 실제 계정 사용 (예: Threads 분석이면 게시물이 많은 계정)
+- "타입 체크 통과" 또는 "유닛 테스트 통과"만으로 검증 완료 처리 금지
+- Supabase 등 인프라 프로비저닝이 필요하면 코드 작성과 별개로 반드시 실행
+- /connect-chrome으로 headed 브라우저를 띄워서 사용자가 실시간으로 확인 가능하게
 
 ### Design System
 

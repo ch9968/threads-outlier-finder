@@ -72,11 +72,9 @@ describe("Edge cases: outlier scoring with mixed content", () => {
 describe("Edge cases: Apify data normalization", () => {
   it("should handle post with all zero engagement", () => {
     const post = ApifyPostSchema.parse({
-      type: "post",
-      postId: "1",
+      post_code: "1",
       username: "test",
-      timestamp: 1234567890,
-      date: "2025-01-01T00:00:00.000Z",
+      created_at_timestamp: 1234567890,
     });
 
     expect(calculateTotalEngagement(post)).toBe(0);

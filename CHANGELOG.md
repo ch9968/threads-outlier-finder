@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.1.2.0] - 2026-03-27 — Apify Actor Swap + ABORTED Run Handling
+
+### Changed
+
+- Replaced `automation-lab/threads-scraper` with `futurizerush/meta-threads-scraper` (6 posts → 150-200 posts per scrape)
+- Flattened Apify schema from discriminated union (profile/post) to single flat post schema with denormalized profile data
+- Actor input simplified (removed `mode` and `includeProfile` params)
+- Profile extraction via `extractProfileFromPost()` helper instead of separate profile rows
+
+### Fixed
+
+- ABORTED Apify runs now treated as partial success (data still processed if dataset has items)
+- Added `ABORTING` transitional status handling to prevent "Unknown error" on cost-limited runs
+
+### Added
+
+- CLAUDE.md rules for API preflight verification and e2e testing with representative data
+- `.gstack/` added to `.gitignore`
+
 ## [0.1.1.0] - 2026-03-27 — Phase 1: Data Pipeline + Outlier UI
 
 ### Added

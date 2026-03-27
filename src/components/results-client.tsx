@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getJobStatus } from "@/lib/actions/scraping";
+import { pollApifyRun } from "@/lib/actions/scraping";
 import { OutlierSlider } from "./outlier-slider";
 import { PostCard } from "./post-card";
 
@@ -41,7 +41,7 @@ export function ResultsClient({
   const [threshold, setThreshold] = useState(2);
 
   const poll = useCallback(async () => {
-    const result = await getJobStatus(username);
+    const result = await pollApifyRun(username);
     if (result.data) {
       setStatus(result.data.status);
       if (result.data.errorMessage) {
