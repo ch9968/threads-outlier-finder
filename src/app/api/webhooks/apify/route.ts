@@ -6,6 +6,7 @@ import {
   ApifyPostSchema,
   normalizeMediaType,
   extractProfileFromPost,
+  parseTakenAt,
   type ApifyPost,
 } from "@/lib/apify/schema";
 import { calculateOutlierScores } from "@/lib/outlier";
@@ -122,17 +123,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Parse items through Zod (skip malformed rows)
-    const posts: ApifyPost[] = [];
+    // Parse items through Zod (skip malformed rows) and deduplicate by thread code
+    // The actor may return each thread multiple times (observed 3x duplicates)
+    const postsMap = new Map<string, ApifyPost>();
 
     for (const item of rawItems) {
       const result = ApifyPostSchema.safeParse(item);
       if (result.success) {
-        posts.push(result.data);
+        const code = result.data.thread.code;
+        if (!postsMap.has(code)) {
+          postsMap.set(code, result.data);
+        }
       } else {
         console.warn("Skipping malformed dataset item:", result.error.flatten());
       }
     }
+
+    const posts = Array.from(postsMap.values());
 
     if (posts.length === 0) {
       await supabase
@@ -156,9 +163,7 @@ export async function POST(request: NextRequest) {
           username: profile.username,
           display_name: profile.displayName,
           profile_pic_url: profile.profilePicUrl,
-          follower_count: profile.followerCount,
           is_verified: profile.isVerified,
-          biography: profile.biography,
           last_scraped_at: new Date().toISOString(),
         },
         { onConflict: "username" }
@@ -182,17 +187,17 @@ export async function POST(request: NextRequest) {
     // Batch upsert posts
     const postRows = posts.map((p) => ({
       account_id: account.id,
-      apify_post_id: p.post_code,
-      post_code: p.post_code,
-      text_content: p.text_content ?? null,
-      media_type: normalizeMediaType(p.media_type),
-      like_count: p.like_count,
-      repost_count: p.repost_count,
-      reply_count: p.reply_count,
-      quote_count: p.quote_count,
-      is_reply: false,
+      apify_post_id: p.thread.code,
+      post_code: p.thread.code,
+      text_content: p.thread.caption?.text ?? null,
+      media_type: normalizeMediaType(p.thread.media_type),
+      like_count: p.thread.like_count,
+      repost_count: p.thread.text_post_app_info.repost_count,
+      reply_count: p.thread.text_post_app_info.direct_reply_count,
+      quote_count: p.thread.text_post_app_info.quote_count,
+      is_reply: p.thread.text_post_app_info.is_reply,
       is_repost: false,
-      posted_at: new Date(p.created_at_timestamp * 1000).toISOString(),
+      posted_at: parseTakenAt(p.thread.taken_at),
       raw_data: p as unknown as Record<string, unknown>,
     }));
 

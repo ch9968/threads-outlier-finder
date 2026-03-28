@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.7.0] - 2026-03-28 — Apify Schema Refactor + Reliability Fixes
+
+### Changed
+
+- Migrated to `thenetaji/threads-scraper` actor with nested thread/profile schema
+- `normalizeMediaType` now handles Instagram integer media types (1=image, 2=video, 8=carousel)
+- Middleware auth upgraded to async Web Crypto API for Edge Runtime compatibility
+- Post count display now shows actual DB count filtered by original posts (excludes replies/reposts)
+- Engagement stats on PostCard now include icon indicators
+
+### Fixed
+
+- Duplicate posts from Apify actor deduplicated by thread code before DB upsert
+- Stuck scrape jobs with no Apify run ID auto-fail after 2 minutes
+- Client-side 10-minute timeout for scraping prevents infinite polling
+- `parseTakenAt` properly converts unix timestamps to ISO 8601
+
 ## [0.1.6.0] - 2026-03-28 — QA Fixes + Security Hardening
 
 ### Fixed

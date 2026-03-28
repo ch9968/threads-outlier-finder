@@ -15,21 +15,21 @@ describe("middleware", () => {
   });
 
   describe("getExpectedToken", () => {
-    it("generates a deterministic token from SITE_PASSWORD", () => {
-      const token1 = getExpectedToken();
-      const token2 = getExpectedToken();
+    it("generates a deterministic token from SITE_PASSWORD", async () => {
+      const token1 = await getExpectedToken();
+      const token2 = await getExpectedToken();
       expect(token1).toBe(token2);
     });
 
-    it("returns a 32-char hex string", () => {
-      const token = getExpectedToken();
+    it("returns a 32-char hex string", async () => {
+      const token = await getExpectedToken();
       expect(token).toMatch(/^[0-9a-f]{32}$/);
     });
 
-    it("throws when SITE_PASSWORD is missing", () => {
+    it("throws when SITE_PASSWORD is missing", async () => {
       const original = process.env.SITE_PASSWORD;
       delete process.env.SITE_PASSWORD;
-      expect(() => getExpectedToken()).toThrow("Missing SITE_PASSWORD");
+      await expect(getExpectedToken()).rejects.toThrow("Missing SITE_PASSWORD");
       process.env.SITE_PASSWORD = original;
     });
   });

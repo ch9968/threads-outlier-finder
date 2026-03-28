@@ -4,63 +4,90 @@ import { z } from "zod";
 // Actor Configuration
 // ---------------------------------------------------------------------------
 
-export const APIFY_ACTOR_ID = "futurizerush/meta-threads-scraper";
+export const APIFY_ACTOR_ID = "thenetaji/threads-scraper";
 export const MAX_POSTS_PER_USER = 200;
 
 // ---------------------------------------------------------------------------
 // Apify Actor Output Schema
-// Based on actual API response from futurizerush/meta-threads-scraper
-// Profile data is denormalized into every post item (no separate profile rows)
+// Based on actual API response from thenetaji/threads-scraper (Yw6anyCFnZlDgxUxe)
+// Each item wraps a thread + profile object.
 // ---------------------------------------------------------------------------
 
 /**
  * Single dataset item from the actor output.
- * Each item is a post with profile data embedded.
  */
 export const ApifyPostSchema = z.object({
-  // Post identity
-  post_url: z.string().optional(),
-  post_code: z.string(),
-  text_content: z.string().nullable().optional(),
+  type: z.string().optional(),
+  thread: z.object({
+    pk: z.string().optional(),
+    code: z.string(),
+    caption: z
+      .object({ text: z.string() })
+      .nullable()
+      .optional(),
 
-  // Timestamps
-  created_at: z.string().optional(),
-  created_at_timestamp: z.number(),
+    // Unix timestamp (seconds)
+    taken_at: z.number().int().positive(),
 
-  // Engagement metrics
-  like_count: z.number().int().nonnegative().default(0),
-  reply_count: z.number().int().nonnegative().default(0),
-  repost_count: z.number().int().nonnegative().default(0),
-  quote_count: z.number().int().nonnegative().default(0),
-  share_count: z.number().nullable().optional(),
-  view_count: z.number().nullable().optional(),
+    // Engagement metrics — null coerced to 0 (actor returns null for some posts)
+    like_count: z.preprocess((v) => v ?? 0, z.number().int().nonnegative()),
+    like_and_view_counts_disabled: z.boolean().default(false),
 
-  // Media
-  has_media: z.boolean().default(false),
-  media_type: z.string().catch("text"),
-  media_url: z.string().optional(),
-  media_urls: z.array(z.string()).default([]),
+    // Instagram media_type enum: 1=image, 2=video, 8=carousel, 19=text-only
+    media_type: z.preprocess((v) => v ?? 19, z.number().int()),
 
-  // Content metadata
-  hashtags: z.array(z.string()).default([]),
-  mentions: z.array(z.string()).default([]),
-  urls: z.array(z.string()).default([]),
-  is_pinned: z.boolean().default(false),
-  is_edited: z.boolean().default(false),
+    image_versions2: z
+      .object({
+        candidates: z
+          .array(
+            z.object({
+              url: z.string(),
+              width: z.number().optional(),
+              height: z.number().optional(),
+            })
+          )
+          .default([]),
+      })
+      .nullable()
+      .optional(),
 
-  // Denormalized profile data
-  username: z.string(),
-  display_name: z.string().nullable().optional(),
-  profile_url: z.string().optional(),
-  is_verified: z.boolean().default(false),
-  followers_count: z.number().int().nonnegative().nullable().optional(),
-  bio: z.string().nullable().optional(),
-  profile_pic_url: z.string().nullable().optional(),
-  external_links: z.array(z.string()).default([]),
-  bio_links: z.array(z.string()).default([]),
+    video_versions: z
+      .array(z.object({ url: z.string() }).passthrough())
+      .nullable()
+      .optional(),
 
-  // Scraping metadata
-  scraped_at: z.string().optional(),
+    carousel_media: z.array(z.unknown()).nullable().optional(),
+    audio: z.unknown().nullable().optional(),
+
+    user: z.object({
+      pk: z.string().optional(),
+      username: z.string(),
+      full_name: z.string().nullable().optional(),
+      is_verified: z.boolean().default(false),
+      profile_pic_url: z.string().nullable().optional(),
+    }),
+
+    text_post_app_info: z.object({
+      direct_reply_count: z.preprocess((v) => v ?? 0, z.number().int().nonnegative()),
+      repost_count: z.preprocess((v) => v ?? 0, z.number().int().nonnegative()),
+      quote_count: z.preprocess((v) => v ?? 0, z.number().int().nonnegative()),
+      reshare_count: z.preprocess((v) => v ?? 0, z.number().int().nonnegative()),
+      is_reply: z.boolean().default(false),
+      reply_to_author: z.unknown().nullable().optional(),
+    }),
+  }),
+
+  threadIndex: z.number().optional(),
+  sourceUrl: z.string().optional(),
+
+  profile: z
+    .object({
+      pk: z.string().optional(),
+      username: z.string(),
+      full_name: z.string().nullable().optional(),
+      is_verified: z.boolean().default(false),
+    })
+    .optional(),
 });
 
 export type ApifyPost = z.infer<typeof ApifyPostSchema>;
@@ -69,10 +96,6 @@ export type ApifyPost = z.infer<typeof ApifyPostSchema>;
 // Profile extraction helper
 // ---------------------------------------------------------------------------
 
-/**
- * Profile data extracted from the first post item.
- * The new actor embeds profile data in every post, so we extract once.
- */
 export interface ExtractedProfile {
   username: string;
   displayName: string | null;
@@ -83,13 +106,14 @@ export interface ExtractedProfile {
 }
 
 export function extractProfileFromPost(post: ApifyPost): ExtractedProfile {
+  const user = post.thread.user;
   return {
-    username: post.username.toLowerCase(),
-    displayName: post.display_name ?? null,
-    profilePicUrl: post.profile_pic_url ?? null,
-    followerCount: post.followers_count ?? null,
-    isVerified: post.is_verified,
-    biography: post.bio ?? null,
+    username: user.username.toLowerCase(),
+    displayName: user.full_name ?? null,
+    profilePicUrl: user.profile_pic_url ?? null,
+    followerCount: null,
+    isVerified: user.is_verified,
+    biography: null,
   };
 }
 
@@ -98,8 +122,8 @@ export function extractProfileFromPost(post: ApifyPost): ExtractedProfile {
 // ---------------------------------------------------------------------------
 
 export const ApifyActorInputSchema = z.object({
-  usernames: z.array(z.string().min(1)).min(1),
-  maxPosts: z.number().int().min(1).max(200).default(200),
+  input: z.array(z.object({ url: z.string() })),
+  maxThreads: z.number().int().min(0).max(200).default(MAX_POSTS_PER_USER),
 });
 
 export type ApifyActorInput = z.infer<typeof ApifyActorInputSchema>;
@@ -159,19 +183,19 @@ export type ApifyWebhookPayload = z.infer<typeof ApifyWebhookPayloadSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * Map Apify mediaType to our DB media_type.
- * The new actor uses "photo" for images.
+ * Map Instagram media_type integer to our DB enum.
+ * 1 = image, 2 = video, 8 = carousel/sidecar, 19 = text-only post
  */
 export function normalizeMediaType(
-  apifyMediaType: string | undefined
+  mediaType: number
 ): "text" | "image" | "carousel" | "video" {
-  switch (apifyMediaType) {
-    case "photo":
+  switch (mediaType) {
+    case 1:
       return "image";
-    case "carousel":
-      return "carousel";
-    case "video":
+    case 2:
       return "video";
+    case 8:
+      return "carousel";
     default:
       return "text";
   }
@@ -183,8 +207,20 @@ export function normalizeMediaType(
 
 /**
  * Calculate total engagement from Apify post metrics.
- * Matches the DB formula: like_count + repost_count + reply_count
+ * Matches the DB formula: like_count + repost_count + direct_reply_count
  */
 export function calculateTotalEngagement(post: ApifyPost): number {
-  return post.like_count + post.repost_count + post.reply_count;
+  const tpa = post.thread.text_post_app_info;
+  return post.thread.like_count + tpa.repost_count + tpa.direct_reply_count;
+}
+
+/**
+ * Parse taken_at unix timestamp (seconds) to ISO 8601.
+ */
+export function parseTakenAt(takenAt: number): string {
+  const date = new Date(takenAt * 1000);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid taken_at timestamp: ${takenAt}`);
+  }
+  return date.toISOString();
 }

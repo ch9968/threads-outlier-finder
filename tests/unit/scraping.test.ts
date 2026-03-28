@@ -21,7 +21,7 @@ const mockFrom = vi.fn(() => mockChain);
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
-    from: (...args: unknown[]) => mockFrom(...args),
+    from: (...args: Parameters<typeof mockFrom>) => mockFrom(...args),
   },
 }));
 

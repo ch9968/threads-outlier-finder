@@ -7,6 +7,7 @@ import {
   ApifyPostSchema,
   normalizeMediaType,
   extractProfileFromPost,
+  parseTakenAt,
   type ApifyPost,
 } from "@/lib/apify/schema";
 import { calculateOutlierScores } from "@/lib/outlier";
@@ -146,17 +147,17 @@ export async function startScraping(
 function toPostRows(posts: ApifyPost[], accountId: string) {
   return posts.map((p) => ({
     account_id: accountId,
-    apify_post_id: p.post_code,
-    post_code: p.post_code,
-    text_content: p.text_content ?? null,
-    media_type: normalizeMediaType(p.media_type),
-    like_count: p.like_count,
-    repost_count: p.repost_count,
-    reply_count: p.reply_count,
-    quote_count: p.quote_count,
-    is_reply: false,
+    apify_post_id: p.thread.code,
+    post_code: p.thread.code,
+    text_content: p.thread.caption?.text ?? null,
+    media_type: normalizeMediaType(p.thread.media_type),
+    like_count: p.thread.like_count,
+    repost_count: p.thread.text_post_app_info.repost_count,
+    reply_count: p.thread.text_post_app_info.direct_reply_count,
+    quote_count: p.thread.text_post_app_info.quote_count,
+    is_reply: p.thread.text_post_app_info.is_reply,
     is_repost: false,
-    posted_at: new Date(p.created_at_timestamp * 1000).toISOString(),
+    posted_at: parseTakenAt(p.thread.taken_at),
     raw_data: p as unknown as Record<string, unknown>,
   }));
 }
@@ -182,16 +183,37 @@ export async function pollApifyRun(username: string): Promise<{
 
     const { data: job } = await supabase
       .from("scrape_jobs")
-      .select("id, status, apify_run_id, dataset_id")
+      .select("id, status, apify_run_id, dataset_id, created_at")
       .eq("username", parsed.data.toLowerCase())
       .in("status", ["pending", "scraping"])
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
-    if (!job || !job.apify_run_id) {
-      // No active job or no run ID yet — return current DB status
+    if (!job) {
       return await getJobStatus(parsed.data.toLowerCase());
+    }
+
+    // If the job has no Apify run ID, it means startApifyRun failed but
+    // the job record was left in pending state. Auto-fail after 2 minutes
+    // so the user can retry instead of polling forever.
+    if (!job.apify_run_id) {
+      const jobAge = Date.now() - new Date(job.created_at).getTime();
+      const STUCK_THRESHOLD_MS = 2 * 60 * 1000;
+
+      if (jobAge > STUCK_THRESHOLD_MS) {
+        await supabase
+          .from("scrape_jobs")
+          .update({ status: "failed", error_message: "Analysis failed to start. Please try again." })
+          .eq("id", job.id);
+
+        return {
+          data: { status: "failed", errorMessage: "Analysis failed to start. Please try again.", postCount: null },
+          error: null,
+        };
+      }
+
+      return { data: { status: "pending", errorMessage: null, postCount: null }, error: null };
     }
 
     // Check Apify run status
@@ -252,17 +274,23 @@ export async function pollApifyRun(username: string): Promise<{
       };
     }
 
-    // Parse items through Zod (skip malformed rows)
-    const posts: ApifyPost[] = [];
+    // Parse items through Zod (skip malformed rows) and deduplicate by thread code
+    // The actor may return each thread multiple times (observed 3x duplicates)
+    const postsMap = new Map<string, ApifyPost>();
 
     for (const item of rawItems) {
       const result = ApifyPostSchema.safeParse(item);
       if (result.success) {
-        posts.push(result.data);
+        const code = result.data.thread.code;
+        if (!postsMap.has(code)) {
+          postsMap.set(code, result.data);
+        }
       } else {
         console.warn("Skipping malformed dataset item:", result.error.flatten());
       }
     }
+
+    const posts = Array.from(postsMap.values());
 
     if (posts.length === 0) {
       await supabase
@@ -293,9 +321,7 @@ export async function pollApifyRun(username: string): Promise<{
           username: profile.username,
           display_name: profile.displayName,
           profile_pic_url: profile.profilePicUrl,
-          follower_count: profile.followerCount,
           is_verified: profile.isVerified,
-          biography: profile.biography,
           last_scraped_at: new Date().toISOString(),
         },
         { onConflict: "username" }

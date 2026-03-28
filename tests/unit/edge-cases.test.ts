@@ -72,20 +72,23 @@ describe("Edge cases: outlier scoring with mixed content", () => {
 describe("Edge cases: Apify data normalization", () => {
   it("should handle post with all zero engagement", () => {
     const post = ApifyPostSchema.parse({
-      post_code: "1",
-      username: "test",
-      created_at_timestamp: 1234567890,
+      thread: {
+        code: "1",
+        taken_at: 1698101489,
+        media_type: 19,
+        like_count: 0,
+        user: { username: "test", is_verified: false },
+        text_post_app_info: { is_reply: false },
+      },
     });
 
     expect(calculateTotalEngagement(post)).toBe(0);
   });
 
   it("should normalize all media types correctly", () => {
-    expect(normalizeMediaType("photo")).toBe("image");
-    expect(normalizeMediaType("video")).toBe("video");
-    expect(normalizeMediaType("carousel")).toBe("carousel");
-    expect(normalizeMediaType("text")).toBe("text");
-    expect(normalizeMediaType(undefined)).toBe("text");
-    expect(normalizeMediaType("sticker")).toBe("text");
+    expect(normalizeMediaType(19)).toBe("text");
+    expect(normalizeMediaType(2)).toBe("video");
+    expect(normalizeMediaType(8)).toBe("carousel");
+    expect(normalizeMediaType(1)).toBe("image");
   });
 });

@@ -26,14 +26,10 @@ export async function startApifyRun(
     .actor(APIFY_ACTOR_ID)
     .start(
       {
-        mode: "user",
-        usernames: [username],
-        max_posts: MAX_POSTS_PER_USER,
+        input: [{ url: `https://www.threads.net/@${username}` }],
+        maxThreads: MAX_POSTS_PER_USER,
       },
-      {
-        waitForFinish: 0,
-        maxItems: MAX_POSTS_PER_USER,
-      }
+      { waitForFinish: 0 }
     );
 
   return { id: run.id, datasetId: run.defaultDatasetId };

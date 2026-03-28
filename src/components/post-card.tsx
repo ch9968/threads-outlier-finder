@@ -97,9 +97,9 @@ export function PostCard({
             className="flex gap-3 text-xs text-stone-400"
             style={{ fontFamily: "var(--font-mono)" }}
           >
-            <span title="Likes">{formatNumber(likeCount)}</span>
-            <span title="Reposts">{formatNumber(repostCount)}</span>
-            <span title="Replies">{formatNumber(replyCount)}</span>
+            <span title="Likes"><span className="text-stone-500">&#9825;</span> {formatNumber(likeCount)}</span>
+            <span title="Reposts"><span className="text-stone-500">&#8635;</span> {formatNumber(repostCount)}</span>
+            <span title="Replies"><span className="text-stone-500">&#8617;</span> {formatNumber(replyCount)}</span>
           </div>
           {canAnalyze && (
             <Link
@@ -164,9 +164,9 @@ export function PostCard({
               className="flex gap-2 text-xs text-stone-400"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              <span>{formatNumber(likeCount)}</span>
-              <span>{formatNumber(repostCount)}</span>
-              <span>{formatNumber(replyCount)}</span>
+              <span title="Likes"><span className="text-stone-500">&#9825;</span> {formatNumber(likeCount)}</span>
+              <span title="Reposts"><span className="text-stone-500">&#8635;</span> {formatNumber(repostCount)}</span>
+              <span title="Replies"><span className="text-stone-500">&#8617;</span> {formatNumber(replyCount)}</span>
             </div>
           </div>
           {onToggleCollection && (

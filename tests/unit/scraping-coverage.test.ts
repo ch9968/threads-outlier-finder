@@ -21,7 +21,7 @@ const mockFrom = vi.fn(() => mockChain);
 
 vi.mock("@/lib/supabase/client", () => ({
   supabase: {
-    from: (...args: unknown[]) => mockFrom(...args),
+    from: (...args: Parameters<typeof mockFrom>) => mockFrom(...args),
   },
 }));
 
@@ -170,17 +170,27 @@ describe("pollApifyRun — SUCCEEDED data processing", () => {
 
     mockedFetchDatasetItems.mockResolvedValue([
       {
-        username: "testuser",
-        display_name: "Test User",
-        profile_pic_url: "https://example.com/pic.jpg",
-        text_content: "Hello world",
-        like_count: 100,
-        repost_count: 10,
-        reply_count: 5,
-        quote_count: 2,
-        post_code: "abc123",
-        media_type: "photo",
-        created_at_timestamp: Math.floor(Date.now() / 1000),
+        type: "thread",
+        thread: {
+          code: "abc123",
+          taken_at: 1698101489,
+          like_count: 100,
+          media_type: 1,
+          caption: { text: "Hello world" },
+          user: {
+            username: "testuser",
+            full_name: "Test User",
+            is_verified: false,
+            profile_pic_url: "https://example.com/pic.jpg",
+          },
+          text_post_app_info: {
+            direct_reply_count: 5,
+            repost_count: 10,
+            quote_count: 2,
+            reshare_count: 0,
+            is_reply: false,
+          },
+        },
       },
     ]);
 
@@ -223,17 +233,27 @@ describe("pollApifyRun — SUCCEEDED data processing", () => {
 
     mockedFetchDatasetItems.mockResolvedValue([
       {
-        username: "testuser",
-        display_name: "Test User",
-        profile_pic_url: "https://example.com/pic.jpg",
-        text_content: "Hello",
-        like_count: 50,
-        repost_count: 5,
-        reply_count: 3,
-        quote_count: 1,
-        post_code: "xyz789",
-        media_type: "text",
-        created_at_timestamp: Math.floor(Date.now() / 1000),
+        type: "thread",
+        thread: {
+          code: "xyz789",
+          taken_at: 1698101489,
+          like_count: 50,
+          media_type: 19,
+          caption: { text: "Hello" },
+          user: {
+            username: "testuser",
+            full_name: "Test User",
+            is_verified: false,
+            profile_pic_url: "https://example.com/pic.jpg",
+          },
+          text_post_app_info: {
+            direct_reply_count: 3,
+            repost_count: 5,
+            quote_count: 1,
+            reshare_count: 0,
+            is_reply: false,
+          },
+        },
       },
     ]);
 

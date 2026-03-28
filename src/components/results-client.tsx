@@ -114,8 +114,12 @@ export function ResultsClient({
     }
   }, [status]);
 
+  // Client-side timeout: 10 minutes
+  const CLIENT_TIMEOUT_SECONDS = 600;
+  const isTimedOut = elapsed >= CLIENT_TIMEOUT_SECONDS && (status === "pending" || status === "scraping");
+
   // Loading state
-  if (status === "pending" || status === "scraping") {
+  if ((status === "pending" || status === "scraping") && !isTimedOut) {
     const minutes = Math.floor(elapsed / 60);
     const seconds = elapsed % 60;
     const timeStr = minutes > 0
@@ -139,6 +143,23 @@ export function ResultsClient({
             Large accounts may take a few minutes
           </p>
         )}
+      </div>
+    );
+  }
+
+  // Client-side timeout state
+  if (isTimedOut) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <p className="mb-2 text-sm text-error">
+          Analysis is taking longer than expected. Please try again.
+        </p>
+        <a
+          href="/"
+          className="mt-4 rounded-md border border-stone-700 px-4 py-2 text-sm text-stone-300 transition-colors duration-150 hover:border-stone-500"
+        >
+          Try again
+        </a>
       </div>
     );
   }
@@ -168,13 +189,13 @@ export function ResultsClient({
         <div>
           <h2 className="text-lg font-semibold text-stone-100">
             Outliers
-            <span
-              className="ml-2 text-sm font-normal text-stone-400"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
-              {filteredPosts.length}/{totalOriginalPosts}
-            </span>
           </h2>
+          <p
+            className="mt-0.5 text-xs text-stone-500"
+            style={{ fontFamily: "var(--font-mono)" }}
+          >
+            {filteredPosts.length} / {totalOriginalPosts} posts
+          </p>
           {isSmallSample && (
             <p className="mt-1 text-xs text-stone-500">
               Based on overall average (fewer than 11 original posts)

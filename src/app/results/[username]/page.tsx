@@ -130,12 +130,12 @@ export default async function ResultsPage({ params }: PageProps) {
           <h1 className="text-2xl font-bold text-stone-100">
             @{normalizedUsername}
           </h1>
-          {job.post_count != null && job.post_count > 0 && (
+          {posts.length > 0 && (
             <p
               className="mt-1 text-sm text-stone-400"
               style={{ fontFamily: "var(--font-mono)" }}
             >
-              {job.post_count} posts analyzed
+              {posts.filter((p) => !p.is_reply && !p.is_repost).length} posts analyzed
             </p>
           )}
         </div>

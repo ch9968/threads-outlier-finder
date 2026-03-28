@@ -18,7 +18,7 @@ async function loginAction(formData: FormData) {
   }
 
   const cookieStore = await cookies();
-  cookieStore.set(COOKIE_NAME, getExpectedToken(), {
+  cookieStore.set(COOKIE_NAME, await getExpectedToken(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
