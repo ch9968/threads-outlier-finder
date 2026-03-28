@@ -17,8 +17,11 @@ import { calculateOutlierScores } from "@/lib/outlier";
 function verifyWebhookSecret(request: NextRequest): boolean {
   const secret = process.env.APIFY_WEBHOOK_SECRET;
   if (!secret) {
-    // If no secret configured, skip verification (dev mode)
-    console.warn("APIFY_WEBHOOK_SECRET not set — skipping verification");
+    if (process.env.NODE_ENV === "production") {
+      console.error("APIFY_WEBHOOK_SECRET not set in production — rejecting");
+      return false;
+    }
+    console.warn("APIFY_WEBHOOK_SECRET not set — skipping verification (dev)");
     return true;
   }
 

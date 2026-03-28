@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.6.0] - 2026-03-28 — QA Fixes + Security Hardening
+
+### Fixed
+
+- Apify actor parameter name corrected from `maxPosts` to `max_posts` — was silently ignored, causing only ~10 posts to be scraped instead of 200
+- Auth token derivation upgraded from weak 32-bit hashCode to HMAC-SHA256
+- Webhook endpoint now rejects requests in production when `APIFY_WEBHOOK_SECRET` is missing
+- Responsive mobile layout for PostCard (stack layout below 640px)
+- Loading indicator now shows elapsed time instead of static "30-60 seconds" estimate
+
+### Changed
+
+- `MAX_POSTS_PER_USER` increased from 50 to 200 for better outlier analysis accuracy
+- Apify actor input now includes `mode: "user"` parameter
+
 ## [0.1.5.0] - 2026-03-28 — Phase 3B: Cross-Collection Pattern Analysis
 
 ### Added

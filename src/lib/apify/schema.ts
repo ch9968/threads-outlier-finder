@@ -5,7 +5,7 @@ import { z } from "zod";
 // ---------------------------------------------------------------------------
 
 export const APIFY_ACTOR_ID = "futurizerush/meta-threads-scraper";
-export const MAX_POSTS_PER_USER = 50;
+export const MAX_POSTS_PER_USER = 200;
 
 // ---------------------------------------------------------------------------
 // Apify Actor Output Schema

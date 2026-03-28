@@ -26,8 +26,9 @@ export async function startApifyRun(
     .actor(APIFY_ACTOR_ID)
     .start(
       {
+        mode: "user",
         usernames: [username],
-        maxPosts: MAX_POSTS_PER_USER,
+        max_posts: MAX_POSTS_PER_USER,
       },
       {
         waitForFinish: 0,

@@ -21,9 +21,9 @@ describe("middleware", () => {
       expect(token1).toBe(token2);
     });
 
-    it("starts with s_ prefix", () => {
+    it("returns a 32-char hex string", () => {
       const token = getExpectedToken();
-      expect(token).toMatch(/^s_/);
+      expect(token).toMatch(/^[0-9a-f]{32}$/);
     });
 
     it("throws when SITE_PASSWORD is missing", () => {

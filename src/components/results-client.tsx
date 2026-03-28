@@ -104,17 +104,41 @@ export function ResultsClient({
     (p) => !p.is_reply && !p.is_repost
   ).length;
 
+  // Track elapsed time for loading state
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (status === "pending" || status === "scraping") {
+      const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [status]);
+
   // Loading state
   if (status === "pending" || status === "scraping") {
+    const minutes = Math.floor(elapsed / 60);
+    const seconds = elapsed % 60;
+    const timeStr = minutes > 0
+      ? `${minutes}:${seconds.toString().padStart(2, "0")}`
+      : `${seconds}s`;
+
     return (
       <div className="flex flex-col items-center justify-center py-24">
         <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-stone-600 border-t-primary" />
         <p className="text-sm text-stone-400">
           Analyzing @{username}...
         </p>
-        <p className="mt-1 text-xs text-stone-500">
-          This usually takes 30-60 seconds
+        <p
+          className="mt-1 text-xs text-stone-500"
+          style={{ fontFamily: "var(--font-mono)" }}
+        >
+          {timeStr} elapsed
         </p>
+        {elapsed > 60 && (
+          <p className="mt-1 text-xs text-stone-600">
+            Large accounts may take a few minutes
+          </p>
+        )}
       </div>
     );
   }

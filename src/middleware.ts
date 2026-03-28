@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "crypto";
 
 const COOKIE_NAME = "santiago-auth";
 
@@ -33,23 +34,17 @@ export function middleware(request: NextRequest) {
 }
 
 /**
- * Generate expected token from SITE_PASSWORD.
- * Simple hash to avoid storing plaintext in cookie.
+ * Generate expected token from SITE_PASSWORD using HMAC-SHA256.
  */
 function getExpectedToken(): string {
   const password = process.env.SITE_PASSWORD;
   if (!password) {
     throw new Error("Missing SITE_PASSWORD environment variable");
   }
-  // Simple deterministic token from password.
-  // Not cryptographically strong, but sufficient for a 1-person tool.
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return `s_${Math.abs(hash).toString(36)}`;
+  return createHmac("sha256", password)
+    .update("santiago-auth")
+    .digest("hex")
+    .slice(0, 32);
 }
 
 export { getExpectedToken, COOKIE_NAME };
