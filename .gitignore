@@ -11,3 +11,8 @@ next-env.d.ts
 # Misc
 *.tsbuildinfo
 .gstack/
+
+# Personal scripts (one-off data exports, not for public)
+export_*.js
+check_status.js
+docs/influencers/
